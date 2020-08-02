@@ -1,37 +1,32 @@
 <template>
     <div id="app">
-        <div class="container-fluid">
-            <at-menu mode="horizontal" active-name="1">
-                <at-menu-item name="1"
-                    ><i class="icon icon-home"></i>Navigation One</at-menu-item
-                >
-                <at-menu-item name="2" disabled
-                    ><i class="icon icon-layers"></i>Navigation
-                    Two</at-menu-item
-                >
-                <at-submenu>
-                    <template slot="title"
-                        ><i class="icon icon-life-buoy"></i>Navigation Three -
-                        Submenu</template
-                    >
-                    <at-menu-item-group title="Group One">
-                        <at-menu-item name="3-1">Submenu One</at-menu-item>
-                        <at-menu-item name="3-2" disabled
-                            >Submenu Two</at-menu-item
-                        >
-                    </at-menu-item-group>
-                    <at-menu-item-group title="Group Two">
-                        <at-menu-item name="3-3">Submenu Three</at-menu-item>
-                        <at-menu-item name="3-4">Submenu Four</at-menu-item>
-                    </at-menu-item-group>
-                </at-submenu>
-                <at-menu-item name="4"
-                    ><i class="icon icon-settings"></i>Navigation
-                    Four</at-menu-item
-                >
+        <div class="container container-fluid">
+            <at-menu mode="horizontal" :active-name="$route.name">
+                <at-menu-item name="config">
+                    <router-link :to="{ name: 'config' }">
+                        <i class="icon icon-settings"></i>
+                        <span>Config</span>
+                    </router-link>
+                </at-menu-item>
+                <at-menu-item name="analytics">
+                    <router-link :to="{ name: 'analytics' }">
+                        <i class="icon icon-sliders"></i>
+                        <span>Analytics</span>
+                    </router-link>
+                </at-menu-item>
+                <at-menu-item style="float: right;pointer-events: none;">
+                    <small>
+                        <span>{{ $store.state.pair.base }}</span>
+                        <i
+                            class="icon icon-activity primary-color"
+                            style="margin: 0 2px;font-size: 10px;"
+                        ></i>
+                        <span>{{ $store.state.pair.quote }}</span>
+                    </small>
+                </at-menu-item>
             </at-menu>
         </div>
-        <div class="main container-fluid">
+        <div class="main container container-fluid">
             <router-view />
         </div>
     </div>
@@ -87,11 +82,76 @@ body {
 
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-align: center;
+    overflow-y: scroll;
     color: #0b0e11;
+
+    #app {
+        padding-top: 24px;
+    }
 
     .main {
         padding: 24px;
+    }
+
+    .at-row {
+        margin-bottom: 12px;
+    }
+
+    .normal-color,
+    .primary-color {
+        color: #f0b90b;
+    }
+
+    .success-color {
+        color: #13ce66;
+    }
+
+    .error-color {
+        color: #ff4949;
+    }
+
+    .warning-color {
+        color: #ffc82c;
+    }
+
+    .info-color {
+        color: #78a4fa;
+    }
+
+    .at-select {
+        .at-select__input {
+            margin: 0;
+            padding: 0 24px 0 12px;
+            box-sizing: border-box;
+        }
+        .at-select__selection {
+            min-height: 32px;
+            line-height: 30px;
+            padding: 0 24px 0 12px;
+        }
+    }
+
+    .at-tag {
+        padding: 1px 4px;
+        line-height: normal;
+        margin: 0 2px;
+
+        .at-tag__text {
+            font-size: 9px;
+            font-weight: 400;
+        }
+    }
+
+    .at-menu__item--disabled {
+        cursor: default;
+    }
+
+    .at-btn__loading {
+        display: flex;
+        width: 15px;
+        height: 15px;
+        align-items: center;
+        justify-content: center;
     }
 }
 </style>

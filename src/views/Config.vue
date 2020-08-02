@@ -1,0 +1,116 @@
+<template>
+    <div class="config">
+        <div class="row at-row">
+            <div class="col-md-8 col-xs-24 at-row">
+                <at-card :no-hover="true">
+                    <h4 slot="title">Favorite pairs</h4>
+                    <div slot="extra">
+                        <i class="icon icon-star primary-color"></i>
+                    </div>
+                    <div>
+                        <div class="row at-row">
+                            <div class="col">
+                                <at-select
+                                    v-model="baseSymbol"
+                                    placeholder="Base"
+                                >
+                                    <at-option value="BTC">Bitcoin</at-option>
+                                    <at-option value="ETH">Ethereum</at-option>
+                                    <at-option value="XRP">Ripple</at-option>
+                                    <at-option value="ADA">Cardano</at-option>
+                                    <at-option value="LTC">Litecoin</at-option>
+                                    <at-option value="BNB"
+                                        >BinanceCoin</at-option
+                                    >
+                                </at-select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <at-select
+                                    v-model="quoteSymbol"
+                                    placeholder="Quote"
+                                >
+                                    <at-option value="USDT">Tether</at-option>
+                                    <at-option value="BUSD"
+                                        >BinanceUSD</at-option
+                                    >
+                                </at-select>
+                            </div>
+                        </div>
+                    </div>
+                </at-card>
+            </div>
+            <div class="col-md-16 col-xs-24">
+                <at-card :no-hover="true">
+                    <h4 slot="title">
+                        <span>Api access</span>
+                        <at-tag color="primary">Optional</at-tag>
+                    </h4>
+                    <div slot="extra">
+                        <i class="icon icon-zap primary-color"></i>
+                    </div>
+                    <div>
+                        <div class="row at-row">
+                            <div class="col">
+                                <at-input
+                                    v-model="apiKey"
+                                    placeholder="Api Key"
+                                    icon="link"
+                                ></at-input>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <at-input
+                                    v-model="apiSecret"
+                                    placeholder="Api Secret"
+                                    icon="lock"
+                                ></at-input>
+                            </div>
+                        </div>
+                    </div>
+                </at-card>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+export default {
+    computed: {
+        baseSymbol: {
+            get() {
+                return this.$store.state.pair.base
+            },
+            set(value) {
+                this.$store.commit('baseSymbol', value)
+            }
+        },
+        quoteSymbol: {
+            get() {
+                return this.$store.state.pair.quote
+            },
+            set(value) {
+                this.$store.commit('quoteSymbol', value)
+            }
+        },
+        apiKey: {
+            get() {
+                return this.$store.state.api.key
+            },
+            set(value) {
+                this.$store.commit('apiKey', value)
+            }
+        },
+        apiSecret: {
+            get() {
+                return this.$store.state.api.secret
+            },
+            set(value) {
+                this.$store.commit('apiSecret', value)
+            }
+        }
+    }
+}
+</script>
