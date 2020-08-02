@@ -38,9 +38,7 @@
 </template>
 
 <style lang="scss">
-$brand-color: #f90;
-$brand-color-light: #f90;
-$brand-color-dark: #f90;
+@import url('assets/css/at.css');
 @font-face {
     font-family: 'BinancePlex';
     font-display: swap;
@@ -90,7 +88,7 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-align: center;
-    color: #2c3e50;
+    color: #0b0e11;
 
     .main {
         padding: 24px;
