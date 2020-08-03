@@ -8,19 +8,36 @@
                         <span>Config</span>
                     </router-link>
                 </at-menu-item>
-                <at-menu-item name="analytics">
-                    <router-link :to="{ name: 'analytics' }">
+                <at-submenu>
+                    <template slot="title">
                         <i class="icon icon-sliders"></i>
-                        <span>Analytics</span>
-                    </router-link>
-                </at-menu-item>
+                        <span>Process</span>
+                    </template>
+                    <at-menu-item name="bookOrder">
+                        <router-link
+                            :to="{
+                                name: 'bookOrder',
+                                params: {
+                                    base: $store.state.pair.base.toLowerCase(),
+                                    quote: $store.state.pair.quote.toLowerCase()
+                                }
+                            }"
+                        >
+                            <i class="icon icon-activity"></i>
+                            <span>Book order</span>
+                        </router-link>
+                    </at-menu-item>
+                    <at-menu-item name="myJob">
+                        <router-link :to="{ name: 'myJob' }">
+                            <i class="icon icon-target"></i>
+                            <span>My job</span>
+                        </router-link>
+                    </at-menu-item>
+                </at-submenu>
                 <at-menu-item style="float: right;pointer-events: none;">
                     <small>
                         <span>{{ $store.state.pair.base }}</span>
-                        <i
-                            class="icon icon-activity primary-color"
-                            style="margin: 0 2px;font-size: 10px;"
-                        ></i>
+                        <i class="icon icon-activity primary-color" style="margin: 0 2px;font-size: 10px;"></i>
                         <span>{{ $store.state.pair.quote }}</span>
                     </small>
                 </at-menu-item>
@@ -77,8 +94,7 @@
     font-weight: 800;
 }
 body {
-    font-family: BinancePlex, Arial, PingFangSC-Regular, 'Microsoft YaHei',
-        sans-serif !important;
+    font-family: BinancePlex, Arial, PingFangSC-Regular, 'Microsoft YaHei', sans-serif !important;
 
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -135,6 +151,7 @@ body {
         padding: 1px 4px;
         line-height: normal;
         margin: 0 2px;
+        cursor: pointer;
 
         .at-tag__text {
             font-size: 9px;

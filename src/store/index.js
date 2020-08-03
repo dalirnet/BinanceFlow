@@ -16,10 +16,10 @@ export default new Vuex.Store({
     },
     mutations: {
         baseSymbol(state, value) {
-            state.pair.base = value
+            state.pair.base = value.toUpperCase()
         },
         quoteSymbol(state, value) {
-            state.pair.quote = value
+            state.pair.quote = value.toUpperCase()
         },
         apiKey(state, value) {
             state.api.key = value

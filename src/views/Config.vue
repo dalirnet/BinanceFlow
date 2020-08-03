@@ -10,33 +10,36 @@
                     <div>
                         <div class="row at-row">
                             <div class="col">
-                                <at-select
-                                    v-model="baseSymbol"
-                                    placeholder="Base"
-                                >
+                                <at-select v-model="baseSymbol" placeholder="Base">
                                     <at-option value="BTC">Bitcoin</at-option>
                                     <at-option value="ETH">Ethereum</at-option>
                                     <at-option value="XRP">Ripple</at-option>
                                     <at-option value="ADA">Cardano</at-option>
                                     <at-option value="LTC">Litecoin</at-option>
-                                    <at-option value="BNB"
-                                        >BinanceCoin</at-option
-                                    >
+                                    <at-option value="BNB">BinanceCoin</at-option>
                                 </at-select>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row at-row">
                             <div class="col">
-                                <at-select
-                                    v-model="quoteSymbol"
-                                    placeholder="Quote"
-                                >
+                                <at-select v-model="quoteSymbol" placeholder="Quote">
                                     <at-option value="USDT">Tether</at-option>
-                                    <at-option value="BUSD"
-                                        >BinanceUSD</at-option
-                                    >
+                                    <at-option value="BUSD">BinanceUSD</at-option>
                                 </at-select>
                             </div>
+                        </div>
+                        <div class="flex flex-end">
+                            <router-link
+                                :to="{
+                                    name: 'bookOrder',
+                                    params: {
+                                        base: $store.state.pair.base.toLowerCase(),
+                                        quote: $store.state.pair.quote.toLowerCase()
+                                    }
+                                }"
+                            >
+                                <at-button type="primary">Book order</at-button>
+                            </router-link>
                         </div>
                     </div>
                 </at-card>
@@ -53,21 +56,18 @@
                     <div>
                         <div class="row at-row">
                             <div class="col">
-                                <at-input
-                                    v-model="apiKey"
-                                    placeholder="Api Key"
-                                    icon="link"
-                                ></at-input>
+                                <at-input v-model="apiKey" placeholder="Api Key" icon="link"></at-input>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row at-row">
                             <div class="col">
-                                <at-input
-                                    v-model="apiSecret"
-                                    placeholder="Api Secret"
-                                    icon="lock"
-                                ></at-input>
+                                <at-input v-model="apiSecret" placeholder="Api Secret" icon="lock"></at-input>
                             </div>
+                        </div>
+                        <div class="flex flex-end">
+                            <router-link :to="{ name: 'myJob' }">
+                                <at-button type="primary">My job</at-button>
+                            </router-link>
                         </div>
                     </div>
                 </at-card>

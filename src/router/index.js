@@ -1,7 +1,8 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Config from '../views/Config.vue'
-import Analytics from '../views/Analytics.vue'
+import BookOrder from '../views/BookOrder.vue'
+import MyJob from '../views/MyJob.vue'
 
 Vue.use(VueRouter)
 
@@ -12,9 +13,14 @@ const routes = [
         component: Config
     },
     {
-        path: '/analytics',
-        name: 'analytics',
-        component: Analytics
+        path: '/bookOrder/:base/:quote',
+        name: 'bookOrder',
+        component: BookOrder
+    },
+    {
+        path: '/myJob',
+        name: 'myJob',
+        component: MyJob
     }
 ]
 
