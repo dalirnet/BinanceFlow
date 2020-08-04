@@ -1,7 +1,8 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Config from '../views/Config.vue'
-import BookOrder from '../views/BookOrder.vue'
+import LastTrade from '../views/LastTrade.vue'
+import LastOrder from '../views/LastOrder.vue'
 import MyJob from '../views/MyJob.vue'
 
 Vue.use(VueRouter)
@@ -13,9 +14,14 @@ const routes = [
         component: Config
     },
     {
-        path: '/bookOrder/:base/:quote',
-        name: 'bookOrder',
-        component: BookOrder
+        path: '/lastTrade/:base/:quote',
+        name: 'lastTrade',
+        component: LastTrade
+    },
+    {
+        path: '/lastOrder/:base/:quote',
+        name: 'lastOrder',
+        component: LastOrder
     },
     {
         path: '/myJob',

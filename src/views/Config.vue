@@ -30,15 +30,27 @@
                         </div>
                         <div class="flex flex-end">
                             <router-link
-                                :to="{
-                                    name: 'bookOrder',
+                                :to="{ 
+                                    name: 'lastTrade',
                                     params: {
                                         base: $store.state.pair.base.toLowerCase(),
                                         quote: $store.state.pair.quote.toLowerCase()
                                     }
                                 }"
                             >
-                                <at-button type="primary">Book order</at-button>
+                                <at-button type="primary" hollow>Last trade</at-button>
+                            </router-link>
+                            <span class="space"></span>
+                            <router-link
+                                :to="{
+                                    name: 'lastOrder',
+                                    params: {
+                                        base: $store.state.pair.base.toLowerCase(),
+                                        quote: $store.state.pair.quote.toLowerCase()
+                                    }
+                                }"
+                            >
+                                <at-button type="primary">Last order</at-button>
                             </router-link>
                         </div>
                     </div>

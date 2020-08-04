@@ -13,10 +13,24 @@
                         <i class="icon icon-sliders"></i>
                         <span>Process</span>
                     </template>
-                    <at-menu-item name="bookOrder">
+                    <at-menu-item name="lastTrade">
                         <router-link
                             :to="{
-                                name: 'bookOrder',
+                                name: 'lastTrade',
+                                params: {
+                                    base: $store.state.pair.base.toLowerCase(),
+                                    quote: $store.state.pair.quote.toLowerCase()
+                                }
+                            }"
+                        >
+                            <i class="icon icon-bar-chart-2"></i>
+                            <span>Last trade</span>
+                        </router-link>
+                    </at-menu-item>
+                    <at-menu-item name="lastOrder">
+                        <router-link
+                            :to="{
+                                name: 'lastOrder',
                                 params: {
                                     base: $store.state.pair.base.toLowerCase(),
                                     quote: $store.state.pair.quote.toLowerCase()
@@ -24,7 +38,7 @@
                             }"
                         >
                             <i class="icon icon-activity"></i>
-                            <span>Book order</span>
+                            <span>Last order</span>
                         </router-link>
                     </at-menu-item>
                     <at-menu-item name="myJob">
@@ -109,6 +123,10 @@ body {
         padding: 24px;
     }
 
+    .space {
+        margin: 0 4px;
+    }
+
     .at-row {
         margin-bottom: 12px;
     }
@@ -169,6 +187,45 @@ body {
         height: 15px;
         align-items: center;
         justify-content: center;
+    }
+
+    .watch-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: row-reverse;
+        background: linear-gradient(
+            90deg,
+            rgba(255, 200, 44, 0.06),
+            rgba(255, 255, 255, 1) 20%,
+            rgba(255, 255, 255, 1) 50%,
+            rgba(255, 255, 255, 1) 80%,
+            rgba(255, 200, 44, 0.06)
+        );
+        border-radius: 4px;
+        border: 1px solid #ececec;
+        font-size: 12px;
+    }
+
+    .watch-header,
+    .watch-footer {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        margin: 8px 0;
+
+        .item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+
+    .watch-footer {
+        flex-direction: row-reverse;
     }
 }
 </style>

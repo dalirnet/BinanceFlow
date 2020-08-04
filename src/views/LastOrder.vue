@@ -1,10 +1,10 @@
 <template>
-    <div class="analytics">
+    <div class="last-order">
         <div class="row at-row">
             <div class="col-24">
                 <at-card :no-hover="true">
                     <h4 slot="title">
-                        <span>Book order</span>
+                        <span>Last order</span>
                         <at-tag :color="loading ? 'info' : connected ? 'success' : 'error'" @click.native="toggle">{{
                             loading ? 'loading' : connected ? 'Connect' : 'Disconect'
                         }}</at-tag>
@@ -50,13 +50,12 @@
 
 <script>
 import _ from 'lodash'
+import socketMixin from '@/mixins/socket'
 
 export default {
+    mixins: [socketMixin],
     data() {
         return {
-            ws: null,
-            loading: false,
-            connected: false,
             step: {},
             book: {
                 current: 0,
@@ -66,34 +65,15 @@ export default {
         }
     },
     computed: {
+        streamName() {
+            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@depth'].join('')
+        },
         sumValue() {
             return {
                 sell: _.floor(_.sum(_.map(this.book.sell, item => _.get(item, 'value', 0))), 6),
                 buy: _.floor(_.sum(_.map(this.book.buy, item => _.get(item, 'value', 0))), 6)
             }
-        },
-        baseSymbol() {
-            return this.$store.state.pair.base
-        },
-        quoteSymbol() {
-            return this.$store.state.pair.quote
-        },
-        currentStatus() {
-            return this.connected ? (this.sumValue.buy >= this.sumValue.sell ? 'success-color' : 'error-color') : null
         }
-    },
-    watch: {
-        $route() {
-            this.$store.commit('baseSymbol', this.$route.params.base)
-            this.$store.commit('quoteSymbol', this.$route.params.quote)
-            this.reOpenSocket()
-        }
-    },
-    mounted() {
-        this.$store.commit('baseSymbol', this.$route.params.base)
-        this.$store.commit('quoteSymbol', this.$route.params.quote)
-        this.reset()
-        this.toggle()
     },
     methods: {
         reset() {
@@ -136,55 +116,10 @@ export default {
                 min: {}
             }
         },
-        toggle() {
-            if (!this.loading) {
-                if (this.connected) {
-                    this.closeSocket()
-                } else {
-                    this.openSocket()
-                }
-            }
-            this.loading = true
-        },
-        betterNumber(input) {
-            let [intValue = '0', floatValue = '00'] = _.split(input, '.')
-            return `<strong>${_.replace(intValue, /\B(?=(\d{3})+(?!\d))/g, ',')}</strong><small>.${_.padEnd(
-                floatValue,
-                6,
-                '0'
-            )}</small>`
-        },
         stepLineValue(value) {
             return `${(value * 60) / (this.sumValue.sell + this.sumValue.buy)}%`
         },
-        reOpenSocket() {
-            this.closeSocket()
-            this.openSocket()
-        },
-        openSocket() {
-            this.ws = new WebSocket(
-                `wss://stream.binance.com:9443/stream?streams=${_.toLower(
-                    [this.baseSymbol, this.quoteSymbol].join('')
-                )}@depth`
-            )
-            this.ws.addEventListener('open', () => {
-                this.loading = false
-                this.connected = true
-                this.reset()
-            })
-            this.ws.addEventListener('message', ({ data }) => {
-                this.calc(JSON.parse(data))
-            })
-            this.ws.addEventListener('error', e => {
-                this.ws.close()
-                console.log(e)
-            })
-            this.ws.addEventListener('close', () => {
-                this.loading = false
-                this.connected = false
-            })
-        },
-        calc({ data: { a: sell, b: buy } }) {
+        listenOnSocket({ data: { a: sell, b: buy } }) {
             this.book.current = _.floor((_.toNumber(_.get(sell, '0.0', 0)) + _.toNumber(_.get(buy, '0.0', 0))) / 2, 6)
             if (this.step.mid === 0) {
                 // first calc
@@ -238,43 +173,18 @@ export default {
                     }
                 })
             })
-        },
-        closeSocket() {
-            if (this.ws) {
-                this.ws.close()
-            }
         }
-    },
-    beforeDestroy() {
-        this.closeSocket()
     }
 }
 </script>
 
 <style lang="scss">
-.analytics {
+.last-order {
     .at-card__body {
         padding: 8px 24px;
     }
 
     .watch-box {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: row-reverse;
-        background: linear-gradient(
-            90deg,
-            rgba(255, 200, 44, 0.06),
-            rgba(255, 255, 255, 1) 20%,
-            rgba(255, 255, 255, 1) 50%,
-            rgba(255, 255, 255, 1) 80%,
-            rgba(255, 200, 44, 0.06)
-        );
-        border-radius: 4px;
-        border: 1px solid #ececec;
-        font-size: 12px;
-
         .sell-box,
         .buy-box {
             position: relative;
@@ -389,25 +299,7 @@ export default {
         }
     }
 
-    .watch-header,
     .watch-footer {
-        display: flex;
-        width: 100%;
-        align-items: center;
-        justify-content: space-between;
-        margin: 8px 0;
-
-        .item {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-        }
-    }
-
-    .watch-footer {
-        flex-direction: row-reverse;
-
         .item {
             .sq {
                 position: relative;
@@ -416,10 +308,6 @@ export default {
                 height: 10px;
                 margin: 0 8px;
                 border-radius: 4px;
-            }
-
-            .space {
-                margin: 0 4px;
             }
 
             .small {
