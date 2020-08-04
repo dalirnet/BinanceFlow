@@ -5,9 +5,11 @@
                 <at-card :no-hover="true">
                     <h4 slot="title">
                         <span>Last order</span>
-                        <at-tag :color="loading ? 'info' : connected ? 'success' : 'error'" @click.native="toggle">{{
-                            loading ? 'loading' : connected ? 'Connect' : 'Disconect'
-                        }}</at-tag>
+                        <at-tag
+                            :color="loading ? 'info' : connected ? 'success' : 'error'"
+                            @click.native="toggleConnection"
+                            >{{ loading ? 'loading' : connected ? 'Connect' : 'Disconect' }}</at-tag
+                        >
                     </h4>
                     <div slot="extra">
                         <at-button
@@ -15,7 +17,7 @@
                             :class="loading ? 'info-color' : connected ? 'success-color' : 'error-color'"
                             size="smaller"
                             :disabled="loading"
-                            @click.native="toggle"
+                            @click.native="toggleConnection"
                         ></at-button>
                     </div>
                     <div class="watch-header"></div>
@@ -50,10 +52,10 @@
 
 <script>
 import _ from 'lodash'
-import socketMixin from '@/mixins/socket'
+import connectionMixin from '@/mixins/connection'
 
 export default {
-    mixins: [socketMixin],
+    mixins: [connectionMixin],
     data() {
         return {
             step: {},

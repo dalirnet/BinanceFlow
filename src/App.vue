@@ -13,39 +13,43 @@
                         <i class="icon icon-sliders"></i>
                         <span>Process</span>
                     </template>
-                    <at-menu-item name="lastTrade">
-                        <router-link
-                            :to="{
-                                name: 'lastTrade',
-                                params: {
-                                    base: $store.state.pair.base.toLowerCase(),
-                                    quote: $store.state.pair.quote.toLowerCase()
-                                }
-                            }"
-                        >
-                            <i class="icon icon-bar-chart-2"></i>
-                            <span>Last trade</span>
-                        </router-link>
+                    <at-menu-item
+                        name="lastTrade"
+                        @click.native="
+                            $router
+                                .push({
+                                    name: 'lastTrade',
+                                    params: {
+                                        base: $store.state.pair.base.toLowerCase(),
+                                        quote: $store.state.pair.quote.toLowerCase()
+                                    }
+                                })
+                                .catch(() => {})
+                        "
+                    >
+                        <i class="icon icon-bar-chart-2"></i>
+                        <span>Last trade</span>
                     </at-menu-item>
-                    <at-menu-item name="lastOrder">
-                        <router-link
-                            :to="{
-                                name: 'lastOrder',
-                                params: {
-                                    base: $store.state.pair.base.toLowerCase(),
-                                    quote: $store.state.pair.quote.toLowerCase()
-                                }
-                            }"
-                        >
-                            <i class="icon icon-activity"></i>
-                            <span>Last order</span>
-                        </router-link>
+                    <at-menu-item
+                        name="lastOrder"
+                        @click.native="
+                            $router
+                                .push({
+                                    name: 'lastOrder',
+                                    params: {
+                                        base: $store.state.pair.base.toLowerCase(),
+                                        quote: $store.state.pair.quote.toLowerCase()
+                                    }
+                                })
+                                .catch(() => {})
+                        "
+                    >
+                        <i class="icon icon-activity"></i>
+                        <span>Last order</span>
                     </at-menu-item>
-                    <at-menu-item name="myJob">
-                        <router-link :to="{ name: 'myJob' }">
-                            <i class="icon icon-target"></i>
-                            <span>My job</span>
-                        </router-link>
+                    <at-menu-item name="myJob" @click.native="$router.push({ name: 'myJob' }).catch(() => {})">
+                        <i class="icon icon-target"></i>
+                        <span>My job</span>
                     </at-menu-item>
                 </at-submenu>
                 <at-menu-item style="float: right;pointer-events: none;">

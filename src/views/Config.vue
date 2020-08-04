@@ -30,7 +30,7 @@
                         </div>
                         <div class="flex flex-end">
                             <router-link
-                                :to="{ 
+                                :to="{
                                     name: 'lastTrade',
                                     params: {
                                         base: $store.state.pair.base.toLowerCase(),

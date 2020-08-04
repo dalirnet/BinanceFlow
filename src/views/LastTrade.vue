@@ -5,9 +5,11 @@
                 <at-card :no-hover="true">
                     <h4 slot="title">
                         <span>Last trade</span>
-                        <at-tag :color="loading ? 'info' : connected ? 'success' : 'error'" @click.native="toggle">{{
-                            loading ? 'loading' : connected ? 'Connect' : 'Disconect'
-                        }}</at-tag>
+                        <at-tag
+                            :color="loading ? 'info' : connected ? 'success' : 'error'"
+                            @click.native="toggleConnection"
+                            >{{ loading ? 'loading' : connected ? 'Connect' : 'Disconect' }}</at-tag
+                        >
                     </h4>
                     <div slot="extra">
                         <at-button
@@ -15,7 +17,7 @@
                             :class="loading ? 'info-color' : connected ? 'success-color' : 'error-color'"
                             size="smaller"
                             :disabled="loading"
-                            @click.native="toggle"
+                            @click.native="toggleConnection"
                         ></at-button>
                     </div>
                     <div class="watch-header"></div>
@@ -29,19 +31,28 @@
 
 <script>
 import _ from 'lodash'
-import socketMixin from '@/mixins/socket'
+import connectionMixin from '@/mixins/connection'
 
 export default {
-    mixins: [socketMixin],
+    mixins: [connectionMixin],
     data() {
         return {
             history: {}
         }
     },
     computed: {
+        requestName() {
+            return ['klines?symbol=', this.baseSymbol, this.quoteSymbol, '&interval=5m&startTime=1596137400000'].join(
+                ''
+            )
+        },
         streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
         }
+    },
+    mounted() {
+        this.reset()
+        this.toggleConnection()
     },
     methods: {
         reset() {
@@ -49,18 +60,7 @@ export default {
         },
         listenOnSocket({
             data: {
-                k: {
-                    t: startTime,
-                    T: closeTime,
-                    o: open,
-                    c: close,
-                    h: high,
-                    l: low,
-                    n: trade,
-                    v: mainAssets,
-                    V: takerAssets,
-                    makerAssets = 0
-                }
+                k: { t: startTime, T: closeTime, o: open, c: close, h: high, l: low, n: trade, V: volume }
             }
         }) {
             // init
@@ -68,9 +68,7 @@ export default {
             close = _.floor(_.toNumber(close), 6)
             high = _.floor(_.toNumber(high), 6)
             low = _.floor(_.toNumber(low), 6)
-            mainAssets = _.floor(_.toNumber(mainAssets), 6)
-            takerAssets = _.floor(_.toNumber(takerAssets), 6)
-            makerAssets = _.floor(mainAssets - takerAssets, 6)
+            volume = _.floor(_.toNumber(volume), 6)
             // start
             this.history[startTime + '-' + closeTime] = {
                 open,
@@ -78,10 +76,12 @@ export default {
                 high,
                 low,
                 trade,
-                takerAssets,
-                makerAssets
+                volume
             }
             console.log(this.history)
+        },
+        listenOnRest(data) {
+            console.log('data', data)
         }
     }
 }

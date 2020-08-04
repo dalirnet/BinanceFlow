@@ -1,9 +1,11 @@
 import _ from 'lodash'
+const superagent = require('superagent')
 
 export default {
     data() {
         return {
             ws: null,
+            rest: superagent,
             loading: false,
             connected: false
         }
@@ -36,9 +38,7 @@ export default {
         this.$store.commit('baseSymbol', this.$route.params.base)
         this.$store.commit('quoteSymbol', this.$route.params.quote)
         this.reset()
-        setTimeout(() => {
-            // this.toggle()
-        }, 1000)
+        // this.toggleConnection()
     },
     methods: {
         betterNumber(input) {
@@ -53,18 +53,42 @@ export default {
                 '</small>'
             ].join('')
         },
-        toggle() {
+        toggleConnection() {
             if (!this.loading) {
+                this.loading = true
                 if (this.connected) {
                     this.closeSocket()
                 } else {
-                    this.openSocket()
+                    if (this.requestName) {
+                        this.httpRequest()
+                            .then(({ body = {} }) => {
+                                if (this.streamName) {
+                                    if (this.listenOnRest) {
+                                        this.listenOnRest(body)
+                                    }
+                                    this.openSocket()
+                                } else {
+                                    this.loading = false
+                                }
+                            })
+                            .catch(e => {
+                                console.log(e)
+                                this.loading = false
+                            })
+                    } else {
+                        if (this.streamName) {
+                            this.openSocket()
+                        }
+                    }
                 }
             }
-            this.loading = true
+        },
+        httpRequest() {
+            console.log('d')
+            return this.rest([this.$store.state.api.rest, this.requestName].join(''))
         },
         openSocket() {
-            this.ws = new WebSocket([this.$store.state.ws, 'stream?streams=', this.streamName].join(''))
+            this.ws = new WebSocket([this.$store.state.api.ws, 'stream?streams=', this.streamName].join(''))
             this.ws.addEventListener('open', () => {
                 this.loading = false
                 this.connected = true

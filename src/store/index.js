@@ -5,12 +5,13 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
     state: {
-        ws : 'wss://stream.binance.com:9443/',
         pair: {
             base: 'BTC',
             quote: 'USDT'
         },
         api: {
+            rest: 'https://api.binance.com/api/v3/',
+            ws: 'wss://stream.binance.com:9443/',
             key: null,
             secret: null
         }
