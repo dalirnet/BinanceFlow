@@ -59,14 +59,14 @@ export default {
                 if (this.connected) {
                     this.closeSocket()
                 } else {
-                    if (this.requestName) {
+                    if (this.requestNames) {
                         this.httpRequest()
-                            .then(({ body = {} }) => {
+                            .then(res => {
                                 if (this.streamName) {
                                     if (this.listenOnRest) {
-                                        this.listenOnRest(body)
+                                        this.listenOnRest(_.map(res, 'body'))
                                     }
-                                    this.openSocket()
+                                    // this.openSocket()
                                 } else {
                                     this.loading = false
                                 }
@@ -75,17 +75,16 @@ export default {
                                 console.log(e)
                                 this.loading = false
                             })
-                    } else {
-                        if (this.streamName) {
-                            this.openSocket()
-                        }
+                    } else if (this.streamName) {
+                        this.openSocket()
                     }
                 }
             }
         },
         httpRequest() {
-            console.log('d')
-            return this.rest([this.$store.state.api.rest, this.requestName].join(''))
+            return Promise.all(
+                _.map(this.requestNames, requestName => this.rest([this.$store.state.api.rest, requestName].join('')))
+            )
         },
         openSocket() {
             this.ws = new WebSocket([this.$store.state.api.ws, 'stream?streams=', this.streamName].join(''))
