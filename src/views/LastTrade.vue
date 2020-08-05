@@ -70,9 +70,14 @@
                             </span>
                             <hr />
                             <span class="item">
-                                <strong>Real time</strong>
+                                <strong>Current price</strong>
                                 <span class="space"></span>
-                                <span class="primary-color" v-html="betterNumber(realTimePrice)"></span>
+                                <span class="primary-color" v-html="betterNumber(price.current)"></span>
+                            </span>
+                            <span class="item">
+                                <strong>Avg price</strong>
+                                <span class="space"></span>
+                                <span class="primary-color" v-html="betterNumber(price.avg)"></span>
                             </span>
                             <hr />
                             <span class="item">
@@ -127,8 +132,11 @@ export default {
             timefream: '30m',
             startTime: moment().subtract(7, 'days'),
             states: {},
-            price: [],
-            realTimePrice: 0
+            price: {
+                list: [],
+                current: 0,
+                avg: 0
+            }
         }
     },
     computed: {
@@ -211,10 +219,10 @@ export default {
             return className
         },
         lowPrice() {
-            return _.floor(_.min(this.price), 6)
+            return _.floor(_.min(this.price.list), 6)
         },
         highPrice() {
-            return _.floor(_.max(this.price), 6)
+            return _.floor(_.max(this.price.list), 6)
         }
     },
     created() {
@@ -253,14 +261,17 @@ export default {
                     up: _.cloneDeep(instance)
                 }
             }
-            this.price = []
-            this.realTimePrice = 0
+            this.price = {
+                list: [],
+                current: 0,
+                avg: 0
+            }
         },
         listenOnSocket({ data: { c: price } }) {
-            this.realTimePrice = _.toNumber(price)
+            this.price.current = _.toNumber(price)
         },
         listenOnRest([{ weightedAvgPrice: avg, volume: allVolume, count: allCount }, details]) {
-            avg = _.floor(_.toNumber(avg), 6)
+            this.price.avg = _.floor(_.toNumber(avg), 6)
             allVolume = _.floor(_.toNumber(allVolume), 6)
             _.forEach(details, ([openTime, open, hight, low, close, volume, closeTime, quoteVolume, count]) => {
                 open = _.floor(_.toNumber(open), 6)
@@ -268,13 +279,18 @@ export default {
                 low = _.floor(_.toNumber(low), 6)
                 close = _.floor(_.toNumber(close), 6)
                 volume = _.floor(_.toNumber(volume), 6)
-                let state = open >= avg && close >= avg ? 'over' : open <= avg && close <= avg ? 'under' : 'between'
+                let state =
+                    open >= this.price.avg && close >= this.price.avg
+                        ? 'over'
+                        : open <= this.price.avg && close <= this.price.avg
+                        ? 'under'
+                        : 'between'
                 let direction = open <= close ? 'up' : 'down'
                 this.states[state][direction].count++
                 this.states[state][direction].volume += volume
                 this.states[state][direction].trade += count
                 this.states[state][direction].price.list.push(...[open, close])
-                this.price.push(...[hight, low])
+                this.price.list.push(...[hight, low])
             })
             // avgPrice
             _.forEach(this.states, (state, stateKey) => {
