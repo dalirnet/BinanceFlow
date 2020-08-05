@@ -23,27 +23,39 @@
                     <div class="watch-header"></div>
                     <div class="watch-box">
                         <div class="states-box">
-                            <div
-                                v-for="(state, stateKey) in states"
-                                class="state-box"
-                                :class="stateKey"
-                                :key="stateKey"
-                            >
+                            <div class="states-inner-box">
                                 <div
-                                    v-for="(direction, directionKey) in state"
-                                    class="direction-box"
-                                    :class="directionKey"
-                                    :key="directionKey"
+                                    v-for="(state, stateKey) in states"
+                                    class="state-box"
+                                    :class="stateKey"
+                                    :key="stateKey"
                                 >
-                                    <span class="content">
-                                        <span>{{ direction.count }}</span>
-                                        <span>{{ direction.volume }}</span>
-                                        <span>{{ direction.trade }}</span>
-                                        <span>{{ direction.price.high }}</span>
-                                        <span>{{ direction.price.avg }}</span>
-                                        <span>{{ direction.price.low }}</span>
-                                    </span>
+                                    <div
+                                        v-for="(direction, directionKey) in state"
+                                        class="direction-box"
+                                        :class="directionKey"
+                                        :key="directionKey"
+                                    >
+                                        <span class="content">
+                                            <template v-if="directionKey != 'avg'">
+                                                <span>
+                                                    <span v-html="betterNumber(direction.price.high)"></span>
+                                                    <br />
+                                                    <span v-html="betterNumber(direction.price.low)"></span>
+                                                </span>
+                                                <span>%{{ cubic[stateKey][directionKey] }}</span>
+                                            </template>
+                                        </span>
+                                    </div>
                                 </div>
+                            </div>
+                            <div class="line">
+                                <div class="status" :class="status">
+                                    <i class="icon icon-arrow-down-left"></i>
+                                </div>
+                                <span class="label">
+                                    <span>Insight?</span>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -83,6 +95,65 @@ export default {
         },
         streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
+        },
+        cubic() {
+            let keep = {
+                overDown: (this.states.over.down.volume / this.states.over.down.count) * this.states.over.down.trade,
+                overUp: (this.states.over.up.volume / this.states.over.up.count) * this.states.over.up.trade,
+                betweenDown:
+                    (this.states.between.down.volume / this.states.between.down.count) * this.states.between.down.trade,
+                betweenUp:
+                    (this.states.between.up.volume / this.states.between.up.count) * this.states.between.up.trade,
+                underDown:
+                    (this.states.under.down.volume / this.states.under.down.count) * this.states.under.down.trade,
+                underUp: (this.states.under.up.volume / this.states.under.up.count) * this.states.under.up.trade
+            }
+            let fullValue = _.sum(_.values(keep))
+            let out = {
+                over: {
+                    down: _.floor((keep.overDown * 100) / fullValue, 2),
+                    up: _.floor((keep.overUp * 100) / fullValue, 2)
+                },
+                between: {
+                    down: _.floor((keep.betweenDown * 100) / fullValue, 2),
+                    up: _.floor((keep.betweenUp * 100) / fullValue, 2)
+                },
+                under: {
+                    down: _.floor((keep.underDown * 100) / fullValue, 2),
+                    up: _.floor((keep.underUp * 100) / fullValue, 2)
+                },
+                axis: {
+                    x: {
+                        over: 0,
+                        between: 0,
+                        under: 0
+                    },
+                    y: {
+                        down: 0,
+                        uo: 0
+                    }
+                }
+            }
+            out.axis.x.over = out.over.down + out.over.up
+            out.axis.x.between = out.between.down + out.between.up
+            out.axis.x.under = out.under.down + out.under.up
+            out.axis.y.down = out.over.down + out.between.down + out.under.down
+            out.axis.y.up = out.over.up + out.between.up + out.under.up
+            return out
+        },
+        status() {
+            let className = []
+            if (this.cubic.axis.x.over > this.cubic.axis.x.under) {
+                className.push('under')
+            } else {
+                className.push('over')
+            }
+            if (this.cubic.axis.y.down > this.cubic.axis.y.down) {
+                className.push('up')
+            } else {
+                className.push('down')
+            }
+            return className
         }
     },
     mounted() {
@@ -97,23 +168,23 @@ export default {
                 trade: 0,
                 price: {
                     list: [],
-                    hight: 0,
+                    high: 0,
                     avg: 0,
                     low: 0
                 }
             }
             this.states = {
-                max: {
+                over: {
                     down: _.cloneDeep(instance),
                     avg: _.cloneDeep(instance),
                     up: _.cloneDeep(instance)
                 },
-                mid: {
+                between: {
                     down: _.cloneDeep(instance),
                     avg: _.cloneDeep(instance),
                     up: _.cloneDeep(instance)
                 },
-                min: {
+                under: {
                     down: _.cloneDeep(instance),
                     avg: _.cloneDeep(instance),
                     up: _.cloneDeep(instance)
@@ -151,47 +222,31 @@ export default {
                 low = _.floor(_.toNumber(low), 6)
                 close = _.floor(_.toNumber(close), 6)
                 volume = _.floor(_.toNumber(volume), 6)
+                let state = open >= avg && close >= avg ? 'over' : open <= avg && close <= avg ? 'under' : 'between'
                 let direction = open <= close ? 'up' : 'down'
-                let state = open >= avg && close >= avg ? 'max' : open <= avg && close <= avg ? 'min' : 'mid'
                 this.states[state][direction].count++
                 this.states[state][direction].volume += volume
                 this.states[state][direction].trade += count
-                this.states[state][direction].price.list.push(hight)
-                this.states[state][direction].price.list.push(low)
-            })
-
-            // mid
-            _.forEach(['up', 'down'], direction => {
-                _.forEach(['count', 'volume', 'trade'], key => {
-                    this.states.mid[direction][key] = this.getAvg([
-                        this.states.min[direction][key],
-                        this.states.max[direction][key]
-                    ])
-                })
+                this.states[state][direction].price.list.push(...[open, close])
             })
 
             // avgPrice
             _.forEach(this.states, (state, stateKey) => {
-                _.forEach(['count', 'volume', 'trade'], key => {
-                    this.states[stateKey].avg[key] = this.getAvg([
-                        this.states[stateKey].down[key],
-                        this.states[stateKey].up[key]
-                    ])
-                })
                 _.forEach(state, (direction, directionKey) => {
-                    this.states[stateKey][directionKey].price.high = _.max(
-                        this.states[stateKey][directionKey].price.list
-                    )
-                    this.states[stateKey][directionKey].price.low = _.min(
-                        this.states[stateKey][directionKey].price.list
-                    )
-                    this.states[stateKey][directionKey].price.avg = this.getAvg([
-                        this.states[stateKey][directionKey].price.high,
-                        this.states[stateKey][directionKey].price.low
-                    ])
+                    if (directionKey != 'avg') {
+                        this.states[stateKey][directionKey].price.high = _.max(
+                            this.states[stateKey][directionKey].price.list
+                        )
+                        this.states[stateKey][directionKey].price.low = _.min(
+                            this.states[stateKey][directionKey].price.list
+                        )
+                        this.states[stateKey][directionKey].price.avg = this.getAvg([
+                            this.states[stateKey][directionKey].price.high,
+                            this.states[stateKey][directionKey].price.low
+                        ])
+                    }
                 })
             })
-            console.log(this.states)
         },
         getAvg(array) {
             return _.floor(_.sum(array) / array.length, 6)
@@ -212,96 +267,191 @@ export default {
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-direction: column;
-        border-radius: 4px;
-        border: 1px solid #ececec;
-        overflow: hidden;
-    }
 
-    .state-box {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: row;
+        .line {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            top: -16px;
+            left: -16px;
+            right: -16px;
+            bottom: -16px;
+            z-index: 10;
 
-        .direction-box {
+            &::before,
+            &::after {
+                content: '';
+                position: absolute;
+            }
+
+            &::before {
+                left: 0;
+                right: 0;
+                top: 50%;
+                height: 1px;
+                border-top: dashed 1px #f0b90b;
+            }
+
+            &::after {
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                width: 1px;
+                border-left: dashed 1px #f0b90b;
+            }
+
+            .status {
+                position: absolute;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 108px;
+                height: 108px;
+                top: 50%;
+                left: 50%;
+                margin: -54px 0 0 -54px;
+                border-radius: 50%;
+                background: #ffffff;
+                z-index: 1;
+                font-size: 140px;
+
+                i {
+                    opacity: 0.2;
+                }
+
+                &.up {
+                    color: #13ce66;
+                }
+
+                &.down {
+                    color: #ff4949;
+                }
+
+                &.over {
+                    &.up {
+                        transform: scale(-1);
+                    }
+                    &.down {
+                        transform: scale(1, -1);
+                    }
+                }
+
+                &.under {
+                    &.up {
+                        transform: scale(-1, 1);
+                    }
+                    &.down {
+                        transform: scale(1);
+                    }
+                }
+            }
+
+            .label {
+                z-index: 2;
+                background: #f0b90b;
+                color: #0b0e11;
+                font-weight: bold;
+                padding: 2px 4px;
+                border-radius: 4px;
+                font-size: 10px;
+            }
+        }
+
+        .states-inner-box {
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 140px;
-            height: 140px;
+            flex-direction: column;
+            border-radius: 4px;
+            border: 1px solid #ececec;
+            overflow: hidden;
 
-            &.down {
-            }
-
-            &.avg {
-            }
-
-            &.up {
-            }
-
-            .content {
+            .state-box {
+                position: relative;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                flex-direction: column;
-                z-index: 10;
-            }
-        }
+                flex-direction: row;
 
-        &.max {
-            .down {
-                background: rgba(255, 73, 73, 0.2);
-            }
+                .direction-box {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 140px;
+                    height: 140px;
 
-            .avg {
-                background: linear-gradient(90deg, rgba(255, 73, 73, 0.2), rgba(19, 206, 102, 0.6));
-            }
+                    .content {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-direction: column;
+                        z-index: 20;
 
-            .up {
-                background: rgba(19, 206, 102, 0.6);
-            }
-        }
-
-        &.mid {
-            .down {
-                background: linear-gradient(-180deg, rgba(255, 73, 73, 0.2), rgba(255, 73, 73, 0.6));
-            }
-
-            .avg {
-                z-index: 9;
-
-                &::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: #fff;
-                    transform: scale(1.02);
-                    border-radius: 4px;
+                        > span {
+                            background: rgba(255, 255, 255, 0.6);
+                            padding: 2px 4px;
+                            border-radius: 4px;
+                            margin: 2px 0;
+                        }
+                    }
                 }
-            }
 
-            .up {
-                background: linear-gradient(0deg, rgba(19, 206, 102, 0.2), rgba(19, 206, 102, 0.6));
-            }
-        }
+                &.over {
+                    .down {
+                        background: rgba(255, 73, 73, 0.2);
+                    }
 
-        &.min {
-            .down {
-                background: rgba(255, 73, 73, 0.6);
-            }
+                    .avg {
+                        background: linear-gradient(90deg, rgba(255, 73, 73, 0.2), rgba(19, 206, 102, 0.6));
+                    }
 
-            .avg {
-                background: linear-gradient(90deg, rgba(255, 73, 73, 0.6), rgba(19, 206, 102, 0.2));
-            }
+                    .up {
+                        background: rgba(19, 206, 102, 0.6);
+                    }
+                }
 
-            .up {
-                background: rgba(19, 206, 102, 0.2);
+                &.between {
+                    .down {
+                        background: linear-gradient(-180deg, rgba(255, 73, 73, 0.2), rgba(255, 73, 73, 0.6));
+                    }
+
+                    .avg {
+                        z-index: 9;
+
+                        &::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: #fff;
+                            transform: scale(1.02);
+                            border-radius: 4px;
+                        }
+                    }
+
+                    .up {
+                        background: linear-gradient(0deg, rgba(19, 206, 102, 0.2), rgba(19, 206, 102, 0.6));
+                    }
+                }
+
+                &.under {
+                    .down {
+                        background: rgba(255, 73, 73, 0.6);
+                    }
+
+                    .avg {
+                        background: linear-gradient(90deg, rgba(255, 73, 73, 0.6), rgba(19, 206, 102, 0.2));
+                    }
+
+                    .up {
+                        background: rgba(19, 206, 102, 0.2);
+                    }
+                }
             }
         }
     }
