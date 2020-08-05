@@ -20,7 +20,6 @@
                             @click.native="toggleConnection"
                         ></at-button>
                     </div>
-                    <div class="watch-header"></div>
                     <div class="watch-box">
                         <div class="states-box">
                             <div class="states-inner-box">
@@ -43,7 +42,7 @@
                                                     <br />
                                                     <span v-html="betterNumber(direction.price.low)"></span>
                                                 </span>
-                                                <span>%{{ cubic[stateKey][directionKey] }}</span>
+                                                <span>{{ cubic[stateKey][directionKey] }}<small>%</small></span>
                                             </template>
                                         </span>
                                     </div>
@@ -54,12 +53,62 @@
                                     <i class="icon icon-arrow-down-left"></i>
                                 </div>
                                 <span class="label">
-                                    <span>Insight?</span>
+                                    <span>Avg Price</span>
                                 </span>
                             </div>
                         </div>
+                        <div class="info-box">
+                            <span class="item">
+                                <strong>Timefream</strong>
+                                <span class="space"></span>
+                                <span>{{ timefream }}</span>
+                            </span>
+                            <span class="item">
+                                <strong>As of</strong>
+                                <span class="space"></span>
+                                <span>{{ startTime.format('lll') }}</span>
+                            </span>
+                            <hr />
+                            <span class="item">
+                                <strong>Real time</strong>
+                                <span class="space"></span>
+                                <span class="primary-color" v-html="betterNumber(realTimePrice)"></span>
+                            </span>
+                            <hr />
+                            <span class="item">
+                                <strong>Low price</strong>
+                                <span class="space"></span>
+                                <span class="error-color" v-html="betterNumber(lowPrice)"></span>
+                            </span>
+                            <span class="item">
+                                <strong>High price</strong>
+                                <span class="space"></span>
+                                <span class="success-color" v-html="betterNumber(highPrice)"></span>
+                            </span>
+                            <hr />
+                            <span class="item">
+                                <strong>Over avg</strong>
+                                <span class="space"></span>
+                                <span class="success-color">{{ cubic.axis.x.over }}<small>%</small></span>
+                            </span>
+                            <span class="item">
+                                <strong>Under avg</strong>
+                                <span class="space"></span>
+                                <span class="error-color">{{ cubic.axis.x.under }}<small>%</small></span>
+                            </span>
+                            <hr />
+                            <span class="item">
+                                <strong>Up state</strong>
+                                <span class="space"></span>
+                                <span class="success-color">{{ cubic.axis.y.up }}<small>%</small></span>
+                            </span>
+                            <span class="item">
+                                <strong>Down state</strong>
+                                <span class="space"></span>
+                                <span class="error-color">{{ cubic.axis.y.down }}<small>%</small></span>
+                            </span>
+                        </div>
                     </div>
-                    <div class="watch-footer"></div>
                 </at-card>
             </div>
         </div>
@@ -75,7 +124,11 @@ export default {
     mixins: [connectionMixin],
     data() {
         return {
-            states: {}
+            timefream: '30m',
+            startTime: moment().subtract(7, 'days'),
+            states: {},
+            price: [],
+            realTimePrice: 0
         }
     },
     computed: {
@@ -86,15 +139,15 @@ export default {
                     'klines?symbol=',
                     this.baseSymbol,
                     this.quoteSymbol,
-                    '&interval=5m&startTime=',
-                    moment()
-                        .subtract(1, 'days')
-                        .valueOf()
+                    '&interval=',
+                    this.timefream,
+                    '&startTime=',
+                    this.startTime.valueOf()
                 ].join('')
             ]
         },
         streamName() {
-            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
+            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@ticker'].join('')
         },
         cubic() {
             let keep = {
@@ -134,30 +187,40 @@ export default {
                     }
                 }
             }
-            out.axis.x.over = out.over.down + out.over.up
-            out.axis.x.between = out.between.down + out.between.up
-            out.axis.x.under = out.under.down + out.under.up
-            out.axis.y.down = out.over.down + out.between.down + out.under.down
-            out.axis.y.up = out.over.up + out.between.up + out.under.up
+            out.axis.x.over = _.floor(out.over.down + out.over.up, 2)
+            out.axis.x.between = _.floor(out.between.down + out.between.up, 2)
+            out.axis.x.under = _.floor(out.under.down + out.under.up, 2)
+            out.axis.y.down = _.floor(out.over.down + out.between.down + out.under.down, 2)
+            out.axis.y.up = _.floor(out.over.up + out.between.up + out.under.up, 2)
             return out
         },
         status() {
             let className = []
-            if (this.cubic.axis.x.over > this.cubic.axis.x.under) {
-                className.push('under')
-            } else {
-                className.push('over')
-            }
-            if (this.cubic.axis.y.down > this.cubic.axis.y.down) {
-                className.push('up')
-            } else {
-                className.push('down')
+            if (this.cubic.axis.x.over > 0) {
+                if (this.cubic.axis.x.over > this.cubic.axis.x.under) {
+                    className.push('under')
+                } else {
+                    className.push('over')
+                }
+                if (this.cubic.axis.y.down > this.cubic.axis.y.down) {
+                    className.push('up')
+                } else {
+                    className.push('down')
+                }
             }
             return className
+        },
+        lowPrice() {
+            return _.floor(_.min(this.price), 6)
+        },
+        highPrice() {
+            return _.floor(_.max(this.price), 6)
         }
     },
-    mounted() {
+    created() {
         this.reset()
+    },
+    mounted() {
         this.toggleConnection()
     },
     methods: {
@@ -190,28 +253,11 @@ export default {
                     up: _.cloneDeep(instance)
                 }
             }
+            this.price = []
+            this.realTimePrice = 0
         },
-        listenOnSocket({
-            data: {
-                k: { t: startTime, T: closeTime, o: open, c: close, h: high, l: low, n: trade, V: volume }
-            }
-        }) {
-            // init
-            open = _.floor(_.toNumber(open), 6)
-            close = _.floor(_.toNumber(close), 6)
-            high = _.floor(_.toNumber(high), 6)
-            low = _.floor(_.toNumber(low), 6)
-            volume = _.floor(_.toNumber(volume), 6)
-            // start
-            this.history[startTime + '-' + closeTime] = {
-                open,
-                close,
-                high,
-                low,
-                trade,
-                volume
-            }
-            console.log(this.history)
+        listenOnSocket({ data: { c: price } }) {
+            this.realTimePrice = _.toNumber(price)
         },
         listenOnRest([{ weightedAvgPrice: avg, volume: allVolume, count: allCount }, details]) {
             avg = _.floor(_.toNumber(avg), 6)
@@ -228,8 +274,8 @@ export default {
                 this.states[state][direction].volume += volume
                 this.states[state][direction].trade += count
                 this.states[state][direction].price.list.push(...[open, close])
+                this.price.push(...[hight, low])
             })
-
             // avgPrice
             _.forEach(this.states, (state, stateKey) => {
                 _.forEach(state, (direction, directionKey) => {
@@ -250,8 +296,7 @@ export default {
         },
         getAvg(array) {
             return _.floor(_.sum(array) / array.length, 6)
-        },
-        getBoxPosition() {}
+        }
     }
 }
 </script>
@@ -314,10 +359,16 @@ export default {
                 border-radius: 50%;
                 background: #ffffff;
                 z-index: 1;
-                font-size: 140px;
+                font-size: 160px;
+                opacity: 0;
 
                 i {
                     opacity: 0.2;
+                }
+
+                &.up,
+                &.down {
+                    opacity: 1;
                 }
 
                 &.up {
@@ -355,6 +406,7 @@ export default {
                 padding: 2px 4px;
                 border-radius: 4px;
                 font-size: 10px;
+                opacity: 0.8;
             }
         }
 
@@ -453,6 +505,22 @@ export default {
                     }
                 }
             }
+        }
+    }
+
+    .info-box {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        flex-direction: column;
+        align-self: stretch;
+        flex: 1;
+        padding: 16px 0;
+        box-sizing: border-box;
+
+        .item {
+            margin-bottom: 8px;
         }
     }
 }

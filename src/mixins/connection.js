@@ -38,7 +38,7 @@ export default {
         this.$store.commit('baseSymbol', this.$route.params.base)
         this.$store.commit('quoteSymbol', this.$route.params.quote)
         this.reset()
-        // this.toggleConnection()
+        this.toggleConnection()
     },
     methods: {
         betterNumber(input) {
@@ -62,11 +62,14 @@ export default {
                     if (this.requestNames) {
                         this.httpRequest()
                             .then(res => {
+                                if (this.reset) {
+                                    this.reset()
+                                }
                                 if (this.streamName) {
                                     if (this.listenOnRest) {
                                         this.listenOnRest(_.map(res, 'body'))
                                     }
-                                    // this.openSocket()
+                                    this.openSocket()
                                 } else {
                                     this.loading = false
                                 }
@@ -76,6 +79,9 @@ export default {
                                 this.loading = false
                             })
                     } else if (this.streamName) {
+                        if (this.reset) {
+                            this.reset()
+                        }
                         this.openSocket()
                     }
                 }
@@ -91,9 +97,6 @@ export default {
             this.ws.addEventListener('open', () => {
                 this.loading = false
                 this.connected = true
-                if (this.reset) {
-                    this.reset()
-                }
             })
             this.ws.addEventListener('message', ({ data }) => {
                 if (this.listenOnSocket) {
