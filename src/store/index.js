@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import lockr from 'lockr'
 
 Vue.use(Vuex)
 
@@ -12,8 +13,8 @@ export default new Vuex.Store({
         api: {
             rest: 'https://api.binance.com/api/v3/',
             ws: 'wss://stream.binance.com:9443/',
-            key: null,
-            secret: null
+            key: lockr.get('apiKey', null),
+            secret: lockr.get('apiSecret', null)
         }
     },
     mutations: {
@@ -25,9 +26,11 @@ export default new Vuex.Store({
         },
         apiKey(state, value) {
             state.api.key = value
+            lockr.set('apiKey', value)
         },
         apiSecret(state, value) {
             state.api.secret = value
+            lockr.set('apiSecret', value)
         }
     },
     actions: {}
