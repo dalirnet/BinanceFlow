@@ -47,7 +47,20 @@
                         <i class="icon icon-activity"></i>
                         <span>Last order</span>
                     </at-menu-item>
-                    <at-menu-item name="myJob" @click.native="$router.push({ name: 'myJob' }).catch(() => {})">
+                    <at-menu-item
+                        name="myJob"
+                        @click.native="
+                            $router
+                                .push({
+                                    name: 'myJob',
+                                    params: {
+                                        base: $store.state.pair.base.toLowerCase(),
+                                        quote: $store.state.pair.quote.toLowerCase()
+                                    }
+                                })
+                                .catch(() => {})
+                        "
+                    >
                         <i class="icon icon-target"></i>
                         <span>My job</span>
                     </at-menu-item>

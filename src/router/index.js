@@ -24,7 +24,7 @@ const routes = [
         component: LastOrder
     },
     {
-        path: '/myJob',
+        path: '/myJob/:base/:quote',
         name: 'myJob',
         component: MyJob
     }

@@ -3,23 +3,19 @@
         <div class="row at-row">
             <div class="col-24">
                 <at-card :no-hover="true">
-                    <h4 slot="title">
-                        <span>Last trade</span>
-                        <at-tag
-                            :color="loading ? 'info' : connected ? 'success' : 'error'"
-                            @click.native="toggleConnection"
-                            >{{ loading ? 'loading' : connected ? 'Connect' : 'Disconect' }}</at-tag
-                        >
-                    </h4>
-                    <div slot="extra">
-                        <at-button
-                            :icon="connected ? 'icon-wifi' : 'icon-wifi-off'"
-                            :class="loading ? 'info-color' : connected ? 'success-color' : 'error-color'"
-                            size="smaller"
-                            :disabled="loading"
-                            @click.native="toggleConnection"
-                        ></at-button>
-                    </div>
+                    <ConnectionCardHeaderTitle
+                        slot="title"
+                        title="Last trade"
+                        :loading="loading"
+                        :connected="connected"
+                        @click="toggleConnection"
+                    />
+                    <ConnectionCardHeaderExtra
+                        slot="extra"
+                        :loading="loading"
+                        :connected="connected"
+                        @click="toggleConnection"
+                    />
                     <div class="watch-box">
                         <div class="states-box">
                             <div class="states-inner-box">
@@ -124,9 +120,12 @@
 import _ from 'lodash'
 import moment from 'moment'
 import connectionMixin from '@/mixins/connection'
+import ConnectionCardHeaderTitle from '@/components/ConnectionCardHeaderTitle'
+import ConnectionCardHeaderExtra from '@/components/ConnectionCardHeaderExtra'
 
 export default {
     mixins: [connectionMixin],
+    components: { ConnectionCardHeaderTitle, ConnectionCardHeaderExtra },
     data() {
         return {
             timefream: '30m',

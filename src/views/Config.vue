@@ -77,7 +77,15 @@
                             </div>
                         </div>
                         <div class="flex flex-end">
-                            <router-link :to="{ name: 'myJob' }">
+                            <router-link
+                                :to="{
+                                    name: 'myJob',
+                                    params: {
+                                        base: $store.state.pair.base.toLowerCase(),
+                                        quote: $store.state.pair.quote.toLowerCase()
+                                    }
+                                }"
+                            >
                                 <at-button type="primary">My job</at-button>
                             </router-link>
                         </div>
