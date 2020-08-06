@@ -225,12 +225,6 @@ export default {
             return _.floor(_.max(this.price.list), 6)
         }
     },
-    created() {
-        this.reset()
-    },
-    mounted() {
-        this.toggleConnection()
-    },
     methods: {
         reset() {
             let instance = {

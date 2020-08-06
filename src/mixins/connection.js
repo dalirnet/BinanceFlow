@@ -29,18 +29,17 @@ export default {
     },
     watch: {
         $route() {
-            this.$store.commit('baseSymbol', this.$route.params.base)
-            this.$store.commit('quoteSymbol', this.$route.params.quote)
-            if (this.reset) {
-                this.reset()
-            }
-            this.reOpenSocket()
+            window.location.reload()
+        }
+    },
+    created() {
+        if (this.reset) {
+            this.reset()
         }
     },
     mounted() {
         this.$store.commit('baseSymbol', this.$route.params.base)
         this.$store.commit('quoteSymbol', this.$route.params.quote)
-        this.reset()
         this.toggleConnection()
     },
     methods: {
