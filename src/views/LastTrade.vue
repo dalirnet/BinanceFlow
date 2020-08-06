@@ -119,12 +119,12 @@
 <script>
 import _ from 'lodash'
 import moment from 'moment'
-import connectionMixin from '@/mixins/connection'
+import baseMixin from '@/mixins/base'
 import ConnectionCardHeaderTitle from '@/components/ConnectionCardHeaderTitle'
 import ConnectionCardHeaderExtra from '@/components/ConnectionCardHeaderExtra'
 
 export default {
-    mixins: [connectionMixin],
+    mixins: [baseMixin],
     components: { ConnectionCardHeaderTitle, ConnectionCardHeaderExtra },
     data() {
         return {

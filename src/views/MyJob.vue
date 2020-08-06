@@ -28,12 +28,13 @@
 <script>
 import _ from 'lodash'
 import moment from 'moment'
-import connectionMixin from '@/mixins/connection'
+import baseMixin from '@/mixins/base'
+import signMixin from '@/mixins/sign'
 import ConnectionCardHeaderTitle from '@/components/ConnectionCardHeaderTitle'
 import ConnectionCardHeaderExtra from '@/components/ConnectionCardHeaderExtra'
 
 export default {
-    mixins: [connectionMixin],
+    mixins: [baseMixin, signMixin],
     components: { ConnectionCardHeaderTitle, ConnectionCardHeaderExtra },
     data() {
         return {
@@ -42,8 +43,12 @@ export default {
     },
     computed: {
         streamName() {
-            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@ticker'].join('')
+            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
         }
+    },
+    mounted() {
+        // this.toggleConnection()
+        this.signRequest()
     },
     methods: {
         reset() {

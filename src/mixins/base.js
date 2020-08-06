@@ -1,5 +1,5 @@
 import _ from 'lodash'
-const superagent = require('superagent')
+import superagent from 'superagent'
 
 export default {
     data() {
