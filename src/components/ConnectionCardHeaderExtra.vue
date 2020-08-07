@@ -1,6 +1,7 @@
 <template>
-    <div>
+    <div class="header-extra">
         <at-button
+            type="text"
             :icon="connected ? 'icon-wifi' : 'icon-wifi-off'"
             :class="loading ? 'info-color' : connected ? 'success-color' : 'error-color'"
             size="smaller"
@@ -28,3 +29,11 @@ export default {
     }
 }
 </script>
+
+<style lang="scss">
+.header-extra {
+    .at-btn--smaller {
+        padding: 2px 0;
+    }
+}
+</style>

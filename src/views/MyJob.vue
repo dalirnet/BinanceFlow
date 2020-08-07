@@ -18,7 +18,7 @@
                     />
                     <div class="watch-header">
                         <div class="row flex-middle">
-                            <at-button class="coll">
+                            <at-button class="col">
                                 <span class="success-color" v-html="betterNumber(myCoin.base.free)"></span>
                                 <span class="space"></span>
                                 <span>{{ baseSymbol }}</span>
@@ -26,7 +26,7 @@
                                 <span class="error-color" v-html="betterNumber(myCoin.base.locked)"></span>
                             </at-button>
                             <i class="icon icon-activity primary-color space"></i>
-                            <at-button class="coll">
+                            <at-button class="col">
                                 <span class="success-color" v-html="betterNumber(myCoin.quote.free)"></span>
                                 <span class="space"></span>
                                 <span>{{ quoteSymbol }}</span>
@@ -38,7 +38,78 @@
                     <div class="watch-box">
                         <div class="row"></div>
                     </div>
-                    <div class="watch-footer"></div>
+                    <div class="watch-footer row">
+                        <at-button
+                            v-for="order in myOpenOrder"
+                            :key="order.id"
+                            :type="order.side == 'Buy' ? 'success' : 'error'"
+                            :loading="order.loading"
+                            :disabled="order.loading"
+                            class="col-24 flex flex-middle"
+                            hollow
+                        >
+                            <span class="item">
+                                <small>type</small>
+                                <span class="space"></span>
+                                <strong>{{ order.side }}</strong>
+                            </span>
+                            <span class="item">
+                                <span class="space">|</span>
+                            </span>
+
+                            <span class="item">
+                                <small>value</small>
+                                <span class="space"></span>
+                                <span class="flex">
+                                    <strong v-html="betterNumber(order.value)"></strong>
+                                    <span class="space"></span>
+                                    <small>{{ baseSymbol }}</small>
+                                </span>
+                            </span>
+                            <span class="item">
+                                <span class="space">x</span>
+                            </span>
+                            <span class="item">
+                                <small>price</small>
+                                <span class="space"></span>
+                                <span class="flex">
+                                    <strong v-html="betterNumber(order.price)"></strong>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                </span>
+                            </span>
+                            <span class="item">
+                                <span class="space">=</span>
+                            </span>
+                            <span class="item">
+                                <small>total</small>
+                                <span class="space"></span>
+                                <span class="flex">
+                                    <strong v-html="betterNumber(order.total)"></strong>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                </span>
+                            </span>
+                            <span class="item">
+                                <span class="space">|</span>
+                            </span>
+                            <span class="item">
+                                <small>date</small>
+                                <span class="space"></span>
+                                <strong>{{ order.date }}</strong>
+                            </span>
+                            <span class="item">
+                                <span class="space">|</span>
+                            </span>
+                            <span class="item" @click="cancelOrder(order.id)">
+                                <strong>
+                                    <i class="icon icon-trash-2"></i>
+                                </strong>
+                                <span class="space"></span>
+                                <small>cancel</small>
+                            </span>
+                        </at-button>
+                    </div>
                 </at-card>
             </div>
             <div class="col-24 bot-box">
@@ -49,15 +120,15 @@
                     </div>
                     <div>
                         <div class="row at-row">
-                            <div class="col">
-                                <div class="col at-row">
+                            <div class="row col">
+                                <div class="col-24 at-row">
                                     <at-input :value="bot.fund + ' ' + quoteSymbol" icon="inbox" disabled>
                                         <template slot="prepend">
                                             <span>Current fund</span>
                                         </template>
                                     </at-input>
                                 </div>
-                                <div class="col">
+                                <div class="col-24">
                                     <at-input
                                         v-model="bot.keep.fund"
                                         :placeholder="`Fund as ${quoteSymbol}`"
@@ -66,15 +137,15 @@
                                     ></at-input>
                                 </div>
                             </div>
-                            <div class="col">
-                                <div class="col at-row">
+                            <div class="row col">
+                                <div class="col-24 at-row">
                                     <at-input :value="bot.profit + ' ' + quoteSymbol" icon="trending-up" disabled>
                                         <template slot="prepend">
                                             <span>Current profit</span>
                                         </template>
                                     </at-input>
                                 </div>
-                                <div class="col">
+                                <div class="col-24">
                                     <at-input
                                         v-model="bot.keep.profit"
                                         :placeholder="`Profit as ${quoteSymbol}`"
@@ -117,6 +188,7 @@ export default {
                     locked: 0
                 }
             },
+            myOpenOrder: [],
             bot: {
                 fund: 0,
                 profit: 0,
@@ -129,13 +201,14 @@ export default {
         }
     },
     computed: {
-        streamName() {
+        streamName1() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
         }
     },
     mounted() {
         // this.toggleConnection()
         this.fetchMyCoin()
+        this.fetchMyOpenOrder()
         // this.signRequest('get', 'api/v3/allOrders', {
         //     symbol: 'ETHUSDT'
         // }).then(({ status, body }) => {
@@ -155,35 +228,70 @@ export default {
                     let base = _.find(body, { coin: this.baseSymbol })
                     if (base) {
                         this.myCoin.base = {
-                            free: _.toNumber(base.free),
-                            locked: _.toNumber(base.locked)
+                            free: base.free,
+                            locked: base.locked
                         }
                     }
                     let quote = _.find(body, { coin: this.quoteSymbol })
                     if (quote) {
                         this.myCoin.quote = {
-                            free: _.toNumber(quote.free),
-                            locked: _.toNumber(quote.locked)
+                            free: quote.free,
+                            locked: quote.locked
                         }
-                    }
-                    if (this.bot.fund === 0) {
-                        this.bot.fund = _.floor(this.myCoin.quote.free * 0.2, 6)
-                    }
-                    if (this.bot.profit === 0) {
-                        this.bot.profit = _.floor(this.myCoin.quote.free * 0.02, 6)
+                        if (this.bot.fund === 0) {
+                            this.bot.fund = _.floor(_.toNumber(this.myCoin.quote.free) * 0.2, 6)
+                        }
+                        if (this.bot.profit === 0) {
+                            this.bot.profit = _.floor(_.toNumber(this.myCoin.quote.free) * 0.02, 6)
+                        }
                     }
                 }
             })
         },
+        fetchMyOpenOrder() {
+            this.signRequest('get', 'api/v3/openOrders', {
+                symbol: [this.baseSymbol, this.quoteSymbol].join('')
+            }).then(({ status, body }) => {
+                if (status) {
+                    _.forEach(body, order => {
+                        this.myOpenOrder[order.orderId] = {
+                            id: order.orderId,
+                            side: _.upperFirst(_.toLower(order.side)),
+                            date: moment(order.time).format('MM-DD HH:mm:ss'),
+                            value: _.toNumber(order.origQty),
+                            price: _.toNumber(order.price),
+                            total: _.toNumber(order.origQty) * _.toNumber(order.price),
+                            loading: true
+                        }
+                    })
+                }
+            })
+        },
+        cancelOrder(id) {
+            // this.signRequest('get', 'api/v3/openOrders', {
+            //     symbol: [this.baseSymbol, this.quoteSymbol].join('')
+            // }).then(({ status, body }) => {
+            //     if (status) {
+            //         this.myOpenOrder = _.map(body, order => ({
+            //             id: order.orderId,
+            //             side: _.upperFirst(_.toLower(order.side)),
+            //             date: moment(order.time).format('MM-DD HH:mm:ss'),
+            //             value: _.toNumber(order.origQty),
+            //             price: _.toNumber(order.price),
+            //             total: _.toNumber(order.origQty) * _.toNumber(order.price)
+            //         }))
+            //     }
+            // })
+        },
         setBotFund() {
             let number = _.toNumber(this.bot.keep.fund)
-            if (!_.isNaN(number)) {
+            if (number > 0) {
                 this.bot.fund = number
             }
         },
         setBotProfit() {
             let number = _.toNumber(this.bot.keep.profit)
-            if (!_.isNaN(number)) {
+            if (number > 0) {
                 this.bot.profit = number
             }
         }
@@ -210,6 +318,48 @@ export default {
             justify-content: center;
             flex: 1;
             margin: 4px;
+        }
+    }
+
+    .watch-footer {
+        margin: 0;
+
+        .at-btn.col-24 {
+            position: relative;
+            margin-top: 8px;
+
+            .at-btn__loading {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                margin: -7.5px 0 0 -7.5px;
+            }
+
+            .at-btn__text {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+
+                .item {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+
+                    .flex {
+                        align-items: baseline;
+
+                        .space {
+                            margin: 0 2px;
+                        }
+                    }
+                }
+            }
+
+            &:disabled {
+                .at-btn__text {
+                    opacity: 0.3;
+                }
+            }
         }
     }
 

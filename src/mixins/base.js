@@ -71,7 +71,7 @@ export default {
                                     this.listenOnRest(body)
                                 }
                                 if (this.streamName) {
-                                    // this.openSocket()
+                                    this.openSocket()
                                 } else {
                                     this.loading = false
                                 }
@@ -81,7 +81,7 @@ export default {
                                 this.loading = false
                             })
                     } else if (this.streamName) {
-                        // this.openSocket()
+                        this.openSocket()
                     }
                 }
             }

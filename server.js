@@ -27,7 +27,8 @@ app.post('/bridge', (req, res) => {
         .then(({ status = 200, text = {} }) => {
             res.status(status).send(JSON.parse(text))
         })
-        .catch(({ status = 400, response: { body = {} } = {} }) => {
+        .catch(({ status = 400, response, response: { body = {} } = {} }) => {
+            console.log(response)
             res.status(status).send(body)
         })
 })

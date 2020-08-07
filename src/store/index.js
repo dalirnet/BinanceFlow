@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import Vue from 'vue'
 import Vuex from 'vuex'
 import lockr from 'lockr'
@@ -19,10 +20,10 @@ export default new Vuex.Store({
     },
     mutations: {
         baseSymbol(state, value) {
-            state.pair.base = value.toUpperCase()
+            state.pair.base = _.toUpper(value)
         },
         quoteSymbol(state, value) {
-            state.pair.quote = value.toUpperCase()
+            state.pair.quote = _.toUpper(value)
         },
         apiKey(state, value) {
             state.api.key = value
