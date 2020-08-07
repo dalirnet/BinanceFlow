@@ -25,21 +25,30 @@
                                     :class="stateKey"
                                     :key="stateKey"
                                 >
-                                    <div
-                                        v-for="(direction, directionKey) in state"
-                                        class="direction-box"
-                                        :class="directionKey"
-                                        :key="directionKey"
-                                    >
+                                    <div class="direction-box up">
                                         <span class="content">
-                                            <template v-if="directionKey != 'avg'">
-                                                <span>
-                                                    <span v-html="betterNumber(direction.price.high)"></span>
-                                                    <br />
-                                                    <span v-html="betterNumber(direction.price.low)"></span>
-                                                </span>
-                                                <span>{{ cubic[stateKey][directionKey] }}<small>%</small></span>
-                                            </template>
+                                            <span class="item">
+                                                <span class="success-color" v-html="betterNumber(state.up.max)"></span>
+                                                <br />
+                                                <span class="error-color" v-html="betterNumber(state.up.min)"></span>
+                                            </span>
+                                            <strong class="item">{{ state.up.percent }}<small>%</small></strong>
+                                        </span>
+                                    </div>
+                                    <div class="direction-box boxSpace">
+                                        <span class="content"></span>
+                                    </div>
+                                    <div class="direction-box down">
+                                        <span class="content">
+                                            <span class="item">
+                                                <span
+                                                    class="success-color"
+                                                    v-html="betterNumber(state.down.max)"
+                                                ></span>
+                                                <br />
+                                                <span class="error-color" v-html="betterNumber(state.down.min)"></span>
+                                            </span>
+                                            <strong class="item">{{ state.down.percent }}<small>%</small></strong>
                                         </span>
                                     </div>
                                 </div>
@@ -49,7 +58,7 @@
                                     <i class="icon icon-arrow-down-left"></i>
                                 </div>
                                 <span class="label">
-                                    <span>Avg Price</span>
+                                    <span>Insight !</span>
                                 </span>
                             </div>
                         </div>
@@ -62,13 +71,25 @@
                             <span class="item">
                                 <strong>As of</strong>
                                 <span class="space"></span>
-                                <span>{{ startTime.format('lll') }}</span>
+                                <strong class="info-color">{{ startTime.startOf('minute').format('HH:mm:ss') }}</strong>
+                                <span class="space"></span>
+                                <small class="info-color">({{ startTime.format('MMM D') }})</small>
+                            </span>
+                            <span class="item">
+                                <strong>To</strong>
+                                <span class="space"></span>
+                                <strong class="success-color">{{ lastTimefream.format('HH:mm:ss') }}</strong>
+                                <span class="space"></span>
+                                <small class="success-color">({{ lastTimefream.format('MMM D') }})</small>
                             </span>
                             <hr />
                             <span class="item">
                                 <strong>Current price</strong>
                                 <span class="space"></span>
-                                <span class="primary-color" v-html="betterNumber(price.current)"></span>
+                                <span
+                                    :class="price.current >= price.avg ? 'success-color' : 'error-color'"
+                                    v-html="betterNumber(price.current)"
+                                ></span>
                             </span>
                             <span class="item">
                                 <strong>Avg price</strong>
@@ -77,36 +98,35 @@
                             </span>
                             <hr />
                             <span class="item">
-                                <strong>Low price</strong>
-                                <span class="space"></span>
-                                <span class="error-color" v-html="betterNumber(lowPrice)"></span>
-                            </span>
-                            <span class="item">
                                 <strong>High price</strong>
                                 <span class="space"></span>
                                 <span class="success-color" v-html="betterNumber(highPrice)"></span>
                             </span>
-                            <hr />
                             <span class="item">
-                                <strong>Over avg</strong>
+                                <strong>Low price</strong>
                                 <span class="space"></span>
-                                <span class="success-color">{{ cubic.axis.x.over }}<small>%</small></span>
-                            </span>
-                            <span class="item">
-                                <strong>Under avg</strong>
-                                <span class="space"></span>
-                                <span class="error-color">{{ cubic.axis.x.under }}<small>%</small></span>
+                                <span class="error-color" v-html="betterNumber(lowPrice)"></span>
                             </span>
                             <hr />
+                            <span class="item">
+                                <strong>Over state</strong>
+                                <span class="space"></span>
+                                <span class="success-color">{{ cubic.over }}<small>%</small></span>
+                            </span>
+                            <span class="item">
+                                <strong>Under State</strong>
+                                <span class="space"></span>
+                                <span class="error-color">{{ cubic.under }}<small>%</small></span>
+                            </span>
                             <span class="item">
                                 <strong>Up state</strong>
                                 <span class="space"></span>
-                                <span class="success-color">{{ cubic.axis.y.up }}<small>%</small></span>
+                                <span class="success-color">{{ cubic.up }}<small>%</small></span>
                             </span>
                             <span class="item">
                                 <strong>Down state</strong>
                                 <span class="space"></span>
-                                <span class="error-color">{{ cubic.axis.y.down }}<small>%</small></span>
+                                <span class="error-color">{{ cubic.down }}<small>%</small></span>
                             </span>
                         </div>
                     </div>
@@ -128,11 +148,18 @@ export default {
     components: { ConnectionCardHeaderTitle, ConnectionCardHeaderExtra },
     data() {
         return {
-            timefream: '30m',
-            startTime: moment().subtract(7, 'days'),
-            states: {},
+            timefream: '1m',
+            vwapLength: 15,
+            vwapKey: 'close',
+            startTime: moment()
+                .subtract(12, 'hours')
+                .subtract(1, 'minutes'),
+            lastTimefream: moment()
+                .subtract(1, 'minutes')
+                .endOf('minute'),
+            statesKeep: [],
+            vmwapKeep: [],
             price: {
-                list: [],
                 current: 0,
                 avg: 0
             }
@@ -141,170 +168,164 @@ export default {
     computed: {
         requestNames() {
             return [
-                ['ticker/24hr?symbol=', this.baseSymbol, this.quoteSymbol].join(''),
-                [
-                    'klines?symbol=',
-                    this.baseSymbol,
-                    this.quoteSymbol,
-                    '&interval=',
-                    this.timefream,
-                    '&startTime=',
-                    this.startTime.valueOf()
-                ].join('')
-            ]
+                'klines?symbol=',
+                this.baseSymbol,
+                this.quoteSymbol,
+                '&interval=',
+                this.timefream,
+                '&limit=1000',
+                '&startTime=',
+                this.startTime.valueOf()
+            ].join('')
         },
         streamName() {
-            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@ticker'].join('')
+            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_', this.timefream].join('')
         },
-        cubic() {
-            let keep = {
-                overDown: (this.states.over.down.volume / this.states.over.down.count) * this.states.over.down.trade,
-                overUp: (this.states.over.up.volume / this.states.over.up.count) * this.states.over.up.trade,
-                betweenDown:
-                    (this.states.between.down.volume / this.states.between.down.count) * this.states.between.down.trade,
-                betweenUp:
-                    (this.states.between.up.volume / this.states.between.up.count) * this.states.between.up.trade,
-                underDown:
-                    (this.states.under.down.volume / this.states.under.down.count) * this.states.under.down.trade,
-                underUp: (this.states.under.up.volume / this.states.under.up.count) * this.states.under.up.trade
+        states() {
+            let instance = {
+                percent: 0,
+                volume: 0,
+                trade: 0,
+                max: 0,
+                min: 0
             }
-            let fullValue = _.sum(_.values(keep))
-            let out = {
+            let states = {
                 over: {
-                    down: _.floor((keep.overDown * 100) / fullValue, 2),
-                    up: _.floor((keep.overUp * 100) / fullValue, 2)
+                    down: _.cloneDeep(instance),
+                    up: _.cloneDeep(instance)
                 },
                 between: {
-                    down: _.floor((keep.betweenDown * 100) / fullValue, 2),
-                    up: _.floor((keep.betweenUp * 100) / fullValue, 2)
+                    down: _.cloneDeep(instance),
+                    up: _.cloneDeep(instance)
                 },
                 under: {
-                    down: _.floor((keep.underDown * 100) / fullValue, 2),
-                    up: _.floor((keep.underUp * 100) / fullValue, 2)
-                },
-                axis: {
-                    x: {
-                        over: 0,
-                        between: 0,
-                        under: 0
-                    },
-                    y: {
-                        down: 0,
-                        uo: 0
-                    }
+                    down: _.cloneDeep(instance),
+                    up: _.cloneDeep(instance)
                 }
             }
-            out.axis.x.over = _.floor(out.over.down + out.over.up, 2)
-            out.axis.x.between = _.floor(out.between.down + out.between.up, 2)
-            out.axis.x.under = _.floor(out.under.down + out.under.up, 2)
-            out.axis.y.down = _.floor(out.over.down + out.between.down + out.under.down, 2)
-            out.axis.y.up = _.floor(out.over.up + out.between.up + out.under.up, 2)
-            return out
+            let sumVolume = 0
+
+            _.forEach(this.statesKeep, (timefream, key) => {
+                let moveAvg = _.map(_.range(this.vwapLength + 1), index => [
+                    _.get(this.statesKeep, key + index, timefream)[this.vwapKey],
+                    _.get(this.statesKeep, key + index, timefream).volume
+                ])
+                let sumMoveAvgVolume = _.sum(_.map(moveAvg, 1))
+                let vwap = _.sum(_.map(moveAvg, ([price, weight]) => (price * weight) / sumMoveAvgVolume))
+                let min = _.min([timefream.open, timefream.close])
+                let max = _.max([timefream.open, timefream.close])
+                let state =
+                    timefream.open >= vwap && timefream.close >= vwap
+                        ? 'over'
+                        : timefream.open <= vwap && timefream.close <= vwap
+                        ? 'under'
+                        : 'between'
+                let direction = timefream.open <= timefream.close ? 'up' : 'down'
+                states[state][direction].volume += timefream.volume
+                states[state][direction].trade += timefream.trade
+                if (states[state][direction].max === 0 || states[state][direction].max < max) {
+                    states[state][direction].max = max
+                }
+                if (states[state][direction].min === 0 || states[state][direction].min > min) {
+                    states[state][direction].min = min
+                }
+                if (key === 0) {
+                    this.price.avg = _.floor(vwap, 6)
+                    this.lastTimefream = moment(timefream.to)
+                }
+                sumVolume += timefream.volume
+            })
+            _.forEach(states, (state, stateKey) => {
+                _.forEach(state, (direction, directionKey) => {
+                    states[stateKey][directionKey].percent = direction.volume
+                        ? _.floor((direction.volume * 100) / sumVolume, 2)
+                        : 0
+                })
+            })
+            return states
+        },
+        cubic() {
+            return {
+                over: _.floor(_.sum(_.map(this.states.over, 'percent')), 2),
+                under: _.floor(_.sum(_.map(this.states.under, 'percent')), 2),
+                up: _.floor(
+                    _.sum([this.states.over.up.percent, this.states.between.up.percent, this.states.under.up.percent]),
+                    2
+                ),
+                down: _.floor(
+                    _.sum([
+                        this.states.over.down.percent,
+                        this.states.between.down.percent,
+                        this.states.under.down.percent
+                    ]),
+                    2
+                )
+            }
         },
         status() {
-            let className = []
-            if (this.cubic.axis.x.over > 0) {
-                if (this.cubic.axis.x.over > this.cubic.axis.x.under) {
-                    className.push('under')
-                } else {
-                    className.push('over')
-                }
-                if (this.cubic.axis.y.down > this.cubic.axis.y.down) {
-                    className.push('up')
-                } else {
-                    className.push('down')
-                }
-            }
-            return className
+            return [
+                this.cubic.over > this.cubic.under ? 'under' : 'over',
+                this.cubic.up > this.cubic.down ? 'down' : 'up'
+            ]
         },
         lowPrice() {
-            return _.floor(_.min(this.price.list), 6)
+            return _.min(_.map([this.states.over.down.min, this.states.between.down.min, this.states.under.down.min]))
         },
         highPrice() {
-            return _.floor(_.max(this.price.list), 6)
+            return _.max(_.map([this.states.over.up.max, this.states.between.up.max, this.states.under.up.max]))
         }
     },
     methods: {
         reset() {
-            let instance = {
-                count: 0,
-                volume: 0,
-                trade: 0,
-                price: {
-                    list: [],
-                    high: 0,
-                    avg: 0,
-                    low: 0
-                }
-            }
-            this.states = {
-                over: {
-                    down: _.cloneDeep(instance),
-                    avg: _.cloneDeep(instance),
-                    up: _.cloneDeep(instance)
-                },
-                between: {
-                    down: _.cloneDeep(instance),
-                    avg: _.cloneDeep(instance),
-                    up: _.cloneDeep(instance)
-                },
-                under: {
-                    down: _.cloneDeep(instance),
-                    avg: _.cloneDeep(instance),
-                    up: _.cloneDeep(instance)
-                }
-            }
+            this.statesKeep = []
+            this.vmwapKeep = []
             this.price = {
-                list: [],
                 current: 0,
                 avg: 0
             }
         },
-        listenOnSocket({ data: { c: price } }) {
-            this.price.current = _.toNumber(price)
+        listenOnSocket({ data: { k: timefream } }) {
+            this.price.current = _.floor(_.toNumber(timefream[this.vwapKey.charAt(0)]), 6)
+            if (timefream.x) {
+                this.statesKeep.unshift(
+                    this.newState(
+                        timefream.o,
+                        timefream.h,
+                        timefream.l,
+                        timefream.c,
+                        timefream.V,
+                        timefream.n,
+                        timefream.t,
+                        timefream.T
+                    )
+                )
+            }
         },
-        listenOnRest([{ weightedAvgPrice: avg, volume: allVolume, count: allCount }, details]) {
-            this.price.avg = _.floor(_.toNumber(avg), 6)
-            allVolume = _.floor(_.toNumber(allVolume), 6)
-            _.forEach(details, ([openTime, open, hight, low, close, volume, closeTime, quoteVolume, count]) => {
-                open = _.floor(_.toNumber(open), 6)
-                hight = _.floor(_.toNumber(hight), 6)
-                low = _.floor(_.toNumber(low), 6)
-                close = _.floor(_.toNumber(close), 6)
-                volume = _.floor(_.toNumber(volume), 6)
-                let state =
-                    open >= this.price.avg && close >= this.price.avg
-                        ? 'over'
-                        : open <= this.price.avg && close <= this.price.avg
-                        ? 'under'
-                        : 'between'
-                let direction = open <= close ? 'up' : 'down'
-                this.states[state][direction].count++
-                this.states[state][direction].volume += volume
-                this.states[state][direction].trade += count
-                this.states[state][direction].price.list.push(...[open, close])
-                this.price.list.push(...[hight, low])
-            })
-            // avgPrice
-            _.forEach(this.states, (state, stateKey) => {
-                _.forEach(state, (direction, directionKey) => {
-                    if (directionKey != 'avg') {
-                        this.states[stateKey][directionKey].price.high = _.max(
-                            this.states[stateKey][directionKey].price.list
-                        )
-                        this.states[stateKey][directionKey].price.low = _.min(
-                            this.states[stateKey][directionKey].price.list
-                        )
-                        this.states[stateKey][directionKey].price.avg = this.getAvg([
-                            this.states[stateKey][directionKey].price.high,
-                            this.states[stateKey][directionKey].price.low
-                        ])
-                    }
-                })
+        listenOnRest(data) {
+            _.forEach(_.tail(_.reverse(data)), row => {
+                this.statesKeep.push(this.newState(row[1], row[2], row[3], row[4], row[5], row[8], row[0], row[6]))
             })
         },
-        getAvg(array) {
-            return _.floor(_.sum(array) / array.length, 6)
+        newState(open, hight, low, close, volume, trade, from, to) {
+            open = _.floor(_.toNumber(open), 6)
+            hight = _.floor(_.toNumber(hight), 6)
+            low = _.floor(_.toNumber(low), 6)
+            close = _.floor(_.toNumber(close), 6)
+            volume = _.floor(_.toNumber(volume), 6)
+            return {
+                from,
+                to,
+                open,
+                hight,
+                low,
+                close,
+                volume,
+                trade,
+                price: {
+                    high: open > close ? open : close,
+                    low: open < close ? open : close
+                }
+            }
         }
     }
 }
@@ -434,7 +455,7 @@ export default {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                flex-direction: row;
+                flex-direction: row-reverse;
 
                 .direction-box {
                     position: relative;
@@ -451,11 +472,13 @@ export default {
                         flex-direction: column;
                         z-index: 20;
 
-                        > span {
-                            background: rgba(255, 255, 255, 0.6);
-                            padding: 2px 4px;
+                        .item {
+                            background: rgba(255, 255, 255, 0.9);
+                            padding: 2px 6px;
                             border-radius: 4px;
                             margin: 2px 0;
+                            align-self: stretch;
+                            text-align: center;
                         }
                     }
                 }
@@ -465,7 +488,7 @@ export default {
                         background: rgba(255, 73, 73, 0.2);
                     }
 
-                    .avg {
+                    .boxSpace {
                         background: linear-gradient(90deg, rgba(255, 73, 73, 0.2), rgba(19, 206, 102, 0.6));
                     }
 
@@ -479,7 +502,7 @@ export default {
                         background: linear-gradient(-180deg, rgba(255, 73, 73, 0.2), rgba(255, 73, 73, 0.6));
                     }
 
-                    .avg {
+                    .boxSpace {
                         z-index: 9;
 
                         &::before {
@@ -505,7 +528,7 @@ export default {
                         background: rgba(255, 73, 73, 0.6);
                     }
 
-                    .avg {
+                    .boxSpace {
                         background: linear-gradient(90deg, rgba(255, 73, 73, 0.6), rgba(19, 206, 102, 0.2));
                     }
 

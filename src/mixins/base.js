@@ -40,7 +40,7 @@ export default {
     mounted() {
         this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', ''))
         this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', ''))
-        // this.toggleConnection()
+        this.toggleConnection()
     },
     methods: {
         betterNumber(input) {
@@ -61,16 +61,16 @@ export default {
                 if (this.connected) {
                     this.closeSocket()
                 } else {
+                    if (this.reset) {
+                        this.reset()
+                    }
                     if (this.requestNames) {
                         this.httpRequest()
-                            .then(res => {
-                                if (this.reset) {
-                                    this.reset()
+                            .then(({ body }) => {
+                                if (this.listenOnRest) {
+                                    this.listenOnRest(body)
                                 }
                                 if (this.streamName) {
-                                    if (this.listenOnRest) {
-                                        this.listenOnRest(_.map(res, 'body'))
-                                    }
                                     this.openSocket()
                                 } else {
                                     this.loading = false
@@ -81,18 +81,13 @@ export default {
                                 this.loading = false
                             })
                     } else if (this.streamName) {
-                        if (this.reset) {
-                            this.reset()
-                        }
                         this.openSocket()
                     }
                 }
             }
         },
         httpRequest() {
-            return Promise.all(
-                _.map(this.requestNames, requestName => this.rest([this.$store.state.api.rest, requestName].join('')))
-            )
+            return this.rest([this.$store.state.api.rest, this.requestNames].join(''))
         },
         openSocket() {
             this.ws = new WebSocket([this.$store.state.api.ws, 'stream?streams=', this.streamName].join(''))
