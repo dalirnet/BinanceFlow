@@ -166,9 +166,9 @@ export default {
         }
     },
     computed: {
-        requestNames() {
+        requestName() {
             return [
-                'klines?symbol=',
+                'api/v3/klines?symbol=',
                 this.baseSymbol,
                 this.quoteSymbol,
                 '&interval=',

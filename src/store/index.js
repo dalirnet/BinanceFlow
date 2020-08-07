@@ -11,7 +11,7 @@ export default new Vuex.Store({
             quote: 'USDT'
         },
         api: {
-            rest: 'https://api.binance.com/api/v3/',
+            rest: 'https://api.binance.com/',
             ws: 'wss://stream.binance.com:9443/',
             key: lockr.get('apiKey', null),
             secret: lockr.get('apiSecret', null)

@@ -1,24 +1,19 @@
 # binanceflow
 
-## Project setup
+## Setup
+
 ```
 npm install
 ```
 
-### Compiles and hot-reloads for development
+### Start
+
 ```
-npm run serve
+npm start
 ```
 
-### Compiles and minifies for production
-```
-npm run build
-```
+### Localhost
 
-### Lints and fixes files
 ```
-npm run lint
+http://127.0.0.1:9550/
 ```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).

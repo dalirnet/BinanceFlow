@@ -64,14 +64,14 @@ export default {
                     if (this.reset) {
                         this.reset()
                     }
-                    if (this.requestNames) {
+                    if (this.requestName) {
                         this.httpRequest()
                             .then(({ body }) => {
                                 if (this.listenOnRest) {
                                     this.listenOnRest(body)
                                 }
                                 if (this.streamName) {
-                                    this.openSocket()
+                                    // this.openSocket()
                                 } else {
                                     this.loading = false
                                 }
@@ -81,13 +81,13 @@ export default {
                                 this.loading = false
                             })
                     } else if (this.streamName) {
-                        this.openSocket()
+                        // this.openSocket()
                     }
                 }
             }
         },
         httpRequest() {
-            return this.rest([this.$store.state.api.rest, this.requestNames].join(''))
+            return this.rest([this.$store.state.api.rest, this.requestName].join(''))
         },
         openSocket() {
             this.ws = new WebSocket([this.$store.state.api.ws, 'stream?streams=', this.streamName].join(''))

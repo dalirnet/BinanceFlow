@@ -11,27 +11,31 @@ export default {
         }
     },
     methods: {
-        signRequest() {
-            let payload = {
-                symbol: 'BTCUSDT',
-                timestamp: moment().valueOf(),
-                recvWindow: 20000
-            }
-            payload.signature = hmacSHA256(queryString.stringify(payload), this.$store.state.api.secret).toString()
-            console.log('key', this.$store.state.api.key)
-            console.log('secret', this.$store.state.api.secret)
-            console.log('payload', queryString.stringify(payload))
-            // this.sign
-            //     .get([this.$store.state.api.rest, 'allOrders'].join(''))
-            //     .query(queryString.stringify(payload))
-            //     .set('X-MBX-APIKEY', this.$store.state.api.key)
-            //     .withCredentials()
-            //     .then(data => {
-            //         console.log('data', data)
-            //     })
-            //     .catch(error => {
-            //         console.log('error', error)
-            //     })
+        signRequest(method, action, payload = {}) {
+            return new Promise(resolve => {
+                payload = {
+                    timestamp: moment().valueOf(),
+                    recvWindow: 5000,
+                    ...payload
+                }
+                payload.signature = hmacSHA256(queryString.stringify(payload), this.$store.state.api.secret).toString()
+                this.sign
+                    .post('http://localhost:9550/bridge/')
+                    .send({
+                        method,
+                        url: [this.$store.state.api.rest, action].join(''),
+                        query: queryString.stringify(payload),
+                        header: {
+                            'X-MBX-APIKEY': this.$store.state.api.key
+                        }
+                    })
+                    .then(({ body = {} }) => {
+                        resolve({ status: true, body })
+                    })
+                    .catch(({ body = {} }) => {
+                        resolve({ status: false, body })
+                    })
+            })
         }
     }
 }
