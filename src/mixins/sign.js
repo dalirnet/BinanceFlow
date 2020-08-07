@@ -15,7 +15,7 @@ export default {
             return new Promise(resolve => {
                 payload = {
                     timestamp: moment().valueOf(),
-                    recvWindow: 5000,
+                    recvWindow: 10000,
                     ...payload
                 }
                 payload.signature = hmacSHA256(queryString.stringify(payload), this.$store.state.api.secret).toString()
@@ -29,11 +29,11 @@ export default {
                             'X-MBX-APIKEY': this.$store.state.api.key
                         }
                     })
-                    .then(({ body = {} }) => {
-                        resolve({ status: true, body })
+                    .then(({ body: { data = {}, header = {} } = {} }) => {
+                        resolve({ status: true, data, header })
                     })
-                    .catch(({ body = {} }) => {
-                        resolve({ status: false, body })
+                    .catch(({ body: { data = {}, header = {} } = {} }) => {
+                        resolve({ status: false, data, header })
                     })
             })
         }

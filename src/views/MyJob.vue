@@ -188,7 +188,7 @@ export default {
                     locked: 0
                 }
             },
-            myOpenOrder: [],
+            myOpenOrder: {},
             bot: {
                 fund: 0,
                 profit: 0,
@@ -223,16 +223,16 @@ export default {
             console.log(data)
         },
         fetchMyCoin() {
-            this.signRequest('get', 'sapi/v1/capital/config/getall').then(({ status, body }) => {
+            this.signRequest('get', 'sapi/v1/capital/config/getall').then(({ status, data }) => {
                 if (status) {
-                    let base = _.find(body, { coin: this.baseSymbol })
+                    let base = _.find(data, { coin: this.baseSymbol })
                     if (base) {
                         this.myCoin.base = {
                             free: base.free,
                             locked: base.locked
                         }
                     }
-                    let quote = _.find(body, { coin: this.quoteSymbol })
+                    let quote = _.find(data, { coin: this.quoteSymbol })
                     if (quote) {
                         this.myCoin.quote = {
                             free: quote.free,
@@ -251,37 +251,42 @@ export default {
         fetchMyOpenOrder() {
             this.signRequest('get', 'api/v3/openOrders', {
                 symbol: [this.baseSymbol, this.quoteSymbol].join('')
-            }).then(({ status, body }) => {
+            }).then(({ status, header, data }) => {
+                console.log(header, data)
                 if (status) {
-                    _.forEach(body, order => {
-                        this.myOpenOrder[order.orderId] = {
+                    _.forEach(data, order => {
+                        this.$set(this.myOpenOrder, order.orderId, {
                             id: order.orderId,
                             side: _.upperFirst(_.toLower(order.side)),
                             date: moment(order.time).format('MM-DD HH:mm:ss'),
                             value: _.toNumber(order.origQty),
                             price: _.toNumber(order.price),
                             total: _.toNumber(order.origQty) * _.toNumber(order.price),
-                            loading: true
-                        }
+                            loading: false
+                        })
                     })
                 }
             })
         },
         cancelOrder(id) {
-            // this.signRequest('get', 'api/v3/openOrders', {
-            //     symbol: [this.baseSymbol, this.quoteSymbol].join('')
-            // }).then(({ status, body }) => {
-            //     if (status) {
-            //         this.myOpenOrder = _.map(body, order => ({
-            //             id: order.orderId,
-            //             side: _.upperFirst(_.toLower(order.side)),
-            //             date: moment(order.time).format('MM-DD HH:mm:ss'),
-            //             value: _.toNumber(order.origQty),
-            //             price: _.toNumber(order.price),
-            //             total: _.toNumber(order.origQty) * _.toNumber(order.price)
-            //         }))
-            //     }
-            // })
+            if (!this.myOpenOrder[id].loading) {
+                this.myOpenOrder[id].loading = true
+                console.log('ddd')
+                // this.signRequest('get', 'api/v3/openOrders', {
+                //     symbol: [this.baseSymbol, this.quoteSymbol].join('')
+                // }).then(({ status, body }) => {
+                //     if (status) {
+                //         this.myOpenOrder = _.map(body, order => ({
+                //             id: order.orderId,
+                //             side: _.upperFirst(_.toLower(order.side)),
+                //             date: moment(order.time).format('MM-DD HH:mm:ss'),
+                //             value: _.toNumber(order.origQty),
+                //             price: _.toNumber(order.price),
+                //             total: _.toNumber(order.origQty) * _.toNumber(order.price)
+                //         }))
+                //     }
+                // })
+            }
         },
         setBotFund() {
             let number = _.toNumber(this.bot.keep.fund)

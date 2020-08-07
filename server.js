@@ -24,12 +24,14 @@ app.post('/bridge', (req, res) => {
     superagent(method.toUpperCase(), url)
         .set(header)
         .query(query)
-        .then(({ status = 200, text = {} }) => {
-            res.status(status).send(JSON.parse(text))
+        .then(({ status = 200, res: { headers = {} } = {}, text = {} }) => {
+            res.status(status).send({
+                header: _.pick(headers, ['x-mbx-uuid', 'x-mbx-used-weight', 'x-mbx-used-weight-1m']),
+                data: JSON.parse(text)
+            })
         })
-        .catch(({ status = 400, response, response: { body = {} } = {} }) => {
-            console.log(response)
-            res.status(status).send(body)
+        .catch(({ status = 400, response: { body = {} } = {} }) => {
+            res.status(status).send({ header: {}, data: body })
         })
 })
 
