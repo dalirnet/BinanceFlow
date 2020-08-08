@@ -300,11 +300,6 @@ export default {
         this.fetchMyCoin()
         this.fetchMyOpenOrder()
         this.fetchMyTrade()
-        // this.signRequest('get', 'api/v3/allOrders', {
-        //     symbol: 'ETHUSDT'
-        // }).then(({ status, body }) => {
-        //     console.log(status, body)
-        // })
     },
     methods: {
         reset() {
@@ -414,21 +409,14 @@ export default {
         cancelOrder(id) {
             if (!this.myOpenOrder[id].loading) {
                 this.myOpenOrder[id].loading = true
-                console.log('ddd')
-                // this.signRequest('get', 'api/v3/openOrders', {
-                //     symbol: [this.baseSymbol, this.quoteSymbol].join('')
-                // }).then(({ status, body }) => {
-                //     if (status) {
-                //         this.myOpenOrder = _.map(body, order => ({
-                //             id: order.orderId,
-                //             side: _.upperFirst(_.toLower(order.side)),
-                //             date: moment(order.time).format('MM-DD HH:mm:ss'),
-                //             value: _.toNumber(order.origQty),
-                //             price: _.toNumber(order.price),
-                //             total: _.toNumber(order.origQty) * _.toNumber(order.price)
-                //         }))
-                //     }
-                // })
+                this.signRequest('delete', 'api/v3/order', {
+                    symbol: [this.baseSymbol, this.quoteSymbol].join(''),
+                    orderId: id
+                }).then(({ status, body }) => {
+                    if (status) {
+                        this.$delete(this.myOpenOrder, id)
+                    }
+                })
             }
         },
         setBotFund() {

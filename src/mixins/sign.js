@@ -33,10 +33,12 @@ export default {
                         this.$Notify({
                             title: 'Resolve',
                             type: 'success',
-                            message: ['Path : ' + action, 'Weight : ' + _.get(header, 'x-mbx-used-weight', 0)].join(
-                                '\n'
-                            ),
-                            duration: 8000
+                            message: [
+                                'Method : ' + method,
+                                'Path : ' + action,
+                                'Used weight : ' + _.get(header, 'x-mbx-used-weight', 0)
+                            ].join('\n'),
+                            duration: 6000
                         })
                         resolve({ status: true, data, header })
                     })
@@ -45,7 +47,7 @@ export default {
                             title: 'Reject',
                             type: 'error',
                             message: 'Path : ' + action,
-                            duration: 8000
+                            duration: 12000
                         })
                         resolve({ status: false, data, header })
                     })
