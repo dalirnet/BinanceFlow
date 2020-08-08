@@ -30,9 +30,23 @@ export default {
                         }
                     })
                     .then(({ body: { data = {}, header = {} } = {} }) => {
+                        this.$Notify({
+                            title: 'Resolve',
+                            type: 'success',
+                            message: ['Path : ' + action, 'Weight : ' + _.get(header, 'x-mbx-used-weight', 0)].join(
+                                '\n'
+                            ),
+                            duration: 8000
+                        })
                         resolve({ status: true, data, header })
                     })
                     .catch(({ body: { data = {}, header = {} } = {} }) => {
+                        this.$Notify({
+                            title: 'Reject',
+                            type: 'error',
+                            message: 'Path : ' + action,
+                            duration: 8000
+                        })
                         resolve({ status: false, data, header })
                     })
             })

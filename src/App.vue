@@ -168,6 +168,10 @@ body {
     .info-color {
         color: #78a4fa;
     }
+    
+    .at-notification__message {
+        white-space: pre;
+    }
 
     .at-select {
         .at-select__input {

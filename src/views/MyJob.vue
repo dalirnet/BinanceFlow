@@ -56,7 +56,6 @@
                             <span class="item">
                                 <span class="space">|</span>
                             </span>
-
                             <span class="item">
                                 <small>value</small>
                                 <span class="space"></span>
@@ -112,7 +111,7 @@
                     </div>
                 </at-card>
             </div>
-            <div class="col-24 bot-box">
+            <div class="col-24 bot-box at-row">
                 <at-card :no-hover="true">
                     <h4 slot="title">Bot</h4>
                     <div slot="extra">
@@ -161,6 +160,90 @@
                     </div>
                 </at-card>
             </div>
+            <div class="col-24 trdae-box">
+                <at-card :no-hover="true">
+                    <h4 slot="title">Trade</h4>
+                    <div slot="extra">
+                        <i class="icon icon-shopping-cart primary-color"></i>
+                    </div>
+                    <div class="row flex-middle">
+                        <at-button class="col" :type="mytrade.remaining.base >= 0 ? 'success' : 'error'">
+                            <small>Remaining</small>
+                            <span class="space"></span>
+                            <span v-html="betterNumber(mytrade.remaining.base)"></span>
+                            <span class="space"></span>
+                            <small>{{ baseSymbol }}</small>
+                        </at-button>
+                        <span class="space"></span>
+                        <at-button class="col" :type="mytrade.remaining.quote >= 0 ? 'success' : 'error'">
+                            <small>Remaining</small>
+                            <span class="space"></span>
+                            <span v-html="betterNumber(mytrade.remaining.quote)"></span>
+                            <span class="space"></span>
+                            <small>{{ quoteSymbol }}</small>
+                        </at-button>
+                    </div>
+                    <div class="row">
+                        <at-button
+                            v-for="trade in mytrade.list"
+                            :key="trade.id"
+                            :class="trade.side == 'Buy' ? 'success-color' : 'error-color'"
+                            class="col-24 flex flex-middle"
+                            hollow
+                        >
+                            <span class="item">
+                                <small>type</small>
+                                <span class="space"></span>
+                                <strong>{{ trade.side }}</strong>
+                            </span>
+                            <span class="item">
+                                <span class="space">|</span>
+                            </span>
+                            <span class="item">
+                                <small>value</small>
+                                <span class="space"></span>
+                                <span class="flex">
+                                    <strong v-html="betterNumber(trade.value)"></strong>
+                                    <span class="space"></span>
+                                    <small>{{ baseSymbol }}</small>
+                                </span>
+                            </span>
+                            <span class="item">
+                                <span class="space">x</span>
+                            </span>
+                            <span class="item">
+                                <small>price</small>
+                                <span class="space"></span>
+                                <span class="flex">
+                                    <strong v-html="betterNumber(trade.price)"></strong>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                </span>
+                            </span>
+                            <span class="item">
+                                <span class="space">=</span>
+                            </span>
+                            <span class="item">
+                                <small>total</small>
+                                <span class="space"></span>
+                                <span class="flex">
+                                    <strong v-html="betterNumber(trade.total)"></strong>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                </span>
+                            </span>
+                            <span class="item">
+                                <span class="space">|</span>
+                            </span>
+                            <span class="item">
+                                <small>date</small>
+                                <span class="space"></span>
+                                <strong>{{ trade.date }}</strong>
+                            </span>
+                        </at-button>
+                    </div>
+                </at-card>
+            </div>
         </div>
     </div>
 </template>
@@ -189,6 +272,13 @@ export default {
                 }
             },
             myOpenOrder: {},
+            mytrade: {
+                list: [],
+                remaining: {
+                    base: 0,
+                    quote: 0
+                }
+            },
             bot: {
                 fund: 0,
                 profit: 0,
@@ -209,6 +299,7 @@ export default {
         // this.toggleConnection()
         this.fetchMyCoin()
         this.fetchMyOpenOrder()
+        this.fetchMyTrade()
         // this.signRequest('get', 'api/v3/allOrders', {
         //     symbol: 'ETHUSDT'
         // }).then(({ status, body }) => {
@@ -217,6 +308,24 @@ export default {
     },
     methods: {
         reset() {
+            this.myCoin = {
+                base: {
+                    free: 0,
+                    locked: 0
+                },
+                quote: {
+                    free: 0,
+                    locked: 0
+                }
+            }
+            this.myOpenOrder = {}
+            this.mytrade = {
+                list: [],
+                remaining: {
+                    base: 0,
+                    quote: 0
+                }
+            }
             this.history = {}
         },
         listenOnSocket({ data }) {
@@ -252,7 +361,6 @@ export default {
             this.signRequest('get', 'api/v3/openOrders', {
                 symbol: [this.baseSymbol, this.quoteSymbol].join('')
             }).then(({ status, header, data }) => {
-                console.log(header, data)
                 if (status) {
                     _.forEach(data, order => {
                         this.$set(this.myOpenOrder, order.orderId, {
@@ -264,6 +372,41 @@ export default {
                             total: _.toNumber(order.origQty) * _.toNumber(order.price),
                             loading: false
                         })
+                    })
+                }
+            })
+        },
+        fetchMyTrade() {
+            this.signRequest('get', 'api/v3/myTrades', {
+                symbol: [this.baseSymbol, this.quoteSymbol].join('')
+            }).then(({ status, header, data }) => {
+                if (status) {
+                    this.mytrade.list = _.map(_.reverse(_.sortBy(data, ['time'])), trade => {
+                        let commission = _.toNumber(trade.commission)
+                        let value = _.toNumber(trade.qty)
+                        let price = _.toNumber(trade.price)
+                        let total = value * price
+                        if (trade.commissionAsset == this.baseSymbol) {
+                            value -= commission
+                            total = value * price
+                        } else if (trade.commissionAsset == this.quoteSymbol) {
+                            total -= commission
+                        }
+                        if (trade.isBuyer) {
+                            this.mytrade.remaining.base += value
+                            this.mytrade.remaining.quote -= total
+                        } else {
+                            this.mytrade.remaining.base -= value
+                            this.mytrade.remaining.quote += total
+                        }
+                        return {
+                            id: trade.id,
+                            side: trade.isBuyer ? 'Buy' : 'Sell',
+                            date: moment(trade.time).format('MM-DD HH:mm:ss'),
+                            value: _.floor(value, 6),
+                            price: _.floor(price, 6),
+                            total: _.floor(total, 6)
+                        }
                     })
                 }
             })
@@ -330,15 +473,37 @@ export default {
         margin: 0;
 
         .at-btn.col-24 {
-            position: relative;
-            margin-top: 8px;
-
             .at-btn__loading {
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 margin: -7.5px 0 0 -7.5px;
             }
+
+            &:disabled {
+                .at-btn__text {
+                    opacity: 0.3;
+                }
+            }
+        }
+    }
+
+    .bot-box {
+        .at-input--disabled {
+            .at-input-group__prepend,
+            .at-input__icon,
+            input {
+                cursor: pointer;
+                color: #0b0e11;
+            }
+        }
+    }
+
+    .watch-footer,
+    .trdae-box {
+        .at-btn.col-24 {
+            position: relative;
+            margin-top: 8px;
 
             .at-btn__text {
                 display: flex;
@@ -359,23 +524,12 @@ export default {
                     }
                 }
             }
-
-            &:disabled {
-                .at-btn__text {
-                    opacity: 0.3;
-                }
-            }
         }
     }
 
-    .bot-box {
-        .at-input--disabled {
-            .at-input-group__prepend,
-            .at-input__icon,
-            input {
-                cursor: pointer;
-                color: #0b0e11;
-            }
+    .trdae-box {
+        .row {
+            margin: 0;
         }
     }
 }

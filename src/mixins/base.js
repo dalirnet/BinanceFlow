@@ -44,7 +44,7 @@ export default {
     },
     methods: {
         betterNumber(input) {
-            let [intValue = '0', floatValue = '00'] = _.split(input, '.')
+            let [intValue = '0', floatValue = '00'] = _.split(Number.parseFloat(input).toFixed(6), '.')
             return [
                 '<strong>',
                 _.replace(intValue, /\B(?=(\d{3})+(?!\d))/g, ','),
