@@ -36,7 +36,9 @@
                         </div>
                     </div>
                     <div class="watch-box">
-                        <div class="row">op</div>
+                        <div class="row">
+                            <pre>{{ candles }}</pre>
+                        </div>
                     </div>
                     <div class="watch-footer row">
                         <at-button
@@ -279,6 +281,7 @@ export default {
                     quote: 0
                 }
             },
+            keepCandles: {},
             bot: {
                 fund: 0,
                 profit: 0,
@@ -297,6 +300,7 @@ export default {
                 this.baseSymbol,
                 this.quoteSymbol,
                 '&interval=1m',
+                '&limit=59',
                 '&startTime=',
                 moment()
                     .subtract(60, 'minutes')
@@ -305,6 +309,9 @@ export default {
         },
         streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
+        },
+        candles() {
+            return this.keepCandles
         }
     },
     mounted() {
@@ -326,6 +333,7 @@ export default {
                 }
             }
             this.myOpenOrder = {}
+            this.keepCandles = {}
             this.mytrade = {
                 list: [],
                 remaining: {
@@ -336,10 +344,43 @@ export default {
             this.history = {}
         },
         listenOnSocket({ data: { k: timefream } }) {
-            console.log('listenOnSocket', timefream)
+            this.updateKeepCandles(
+                timefream.o,
+                timefream.h,
+                timefream.l,
+                timefream.c,
+                timefream.V,
+                timefream.n,
+                timefream.t,
+                timefream.T,
+                timefream.x
+            )
         },
         listenOnRest(data) {
-            console.log('listenOnRest', data)
+            _.forEach(data, timefream => {
+                this.updateKeepCandles(
+                    timefream[1],
+                    timefream[2],
+                    timefream[3],
+                    timefream[4],
+                    timefream[5],
+                    timefream[8],
+                    timefream[0],
+                    timefream[6],
+                    true
+                )
+            })
+        },
+        updateKeepCandles(open, hight, low, close, volume, trade, from, to, closed) {
+            this.$set(this.keepCandles, [moment(from).format('HH:mm:ss'), moment(to).format('HH:mm:ss')].join('-'), {
+                open: _.floor(_.toNumber(open), 6),
+                hight: _.floor(_.toNumber(hight), 6),
+                low: _.floor(_.toNumber(low), 6),
+                close: _.floor(_.toNumber(close), 6),
+                volume: _.floor(_.toNumber(volume), 6),
+                trade,
+                closed
+            })
         },
         fetchMyCoin() {
             this.signRequest('get', 'sapi/v1/capital/config/getall').then(({ status, data }) => {
