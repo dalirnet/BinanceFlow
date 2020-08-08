@@ -311,11 +311,44 @@ export default {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
         },
         candles() {
-            return this.keepCandles
+            let timefream = _.take(_.reverse(_.keys(this.keepCandles)), 30)
+            return _.map(timefream, (key, index) => {
+                let current = this.keepCandles[key]
+                current.key = key
+                current.chain = {
+                    state: false,
+                    status: current.close > current.open,
+                    from: current.open,
+                    to: current.close,
+                    volume: current.volume,
+                    length: 1
+                }
+                let chainCheck = true
+                let moveAvg = _.map(_.range(10), prevIndex => {
+                    let prevKey = _.get(timefream, index + prevIndex + 1, key)
+                    let { open, close, volume } = this.keepCandles[prevKey]
+                    if (chainCheck && key !== prevKey && current.chain.status === close > open) {
+                        current.chain.volume = _.floor(current.chain.volume + volume, 6)
+                        current.chain.from = open
+                        current.chain.length++
+                    } else {
+                        chainCheck = false
+                    }
+                    return { open, close, volume }
+                })
+                let sumMoveAvgVolume = _.sum(_.map(moveAvg, 'volume'))
+                if (
+                    current.close >
+                    _.floor(_.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumMoveAvgVolume)), 6)
+                ) {
+                    current.chain.state = true
+                }
+                return current
+            })
         }
     },
     mounted() {
-        // this.toggleConnection()
+        this.toggleConnection()
         // this.fetchMyCoin()
         // this.fetchMyOpenOrder()
         // this.fetchMyTrade()
