@@ -168,7 +168,12 @@ body {
     .info-color {
         color: #78a4fa;
     }
-    
+
+    .at-loading-bar {
+        top: auto;
+        bottom: 0;
+    }
+
     .at-notification__message {
         white-space: pre;
     }

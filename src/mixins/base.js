@@ -28,6 +28,13 @@ export default {
         }
     },
     watch: {
+        loading(flag) {
+            if (flag) {
+                this.$Loading.start()
+            } else {
+                this.$Loading.finish()
+            }
+        },
         $route() {
             window.location.reload()
         }
@@ -40,7 +47,7 @@ export default {
     mounted() {
         this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', ''))
         this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', ''))
-        this.toggleConnection()
+        // this.toggleConnection()
     },
     methods: {
         betterNumber(input) {
@@ -87,13 +94,39 @@ export default {
             }
         },
         httpRequest() {
-            return this.rest([this.$store.state.api.rest, this.requestName].join(''))
+            return new Promise((resolve, reject) => {
+                this.rest([this.$store.state.api.rest, this.requestName].join(''))
+                    .then(data => {
+                        this.$Notify({
+                            title: 'Request',
+                            type: 'success',
+                            message: ['Resolve', 'Name : ' + _.truncate(this.requestName)].join('\n'),
+                            duration: 6000
+                        })
+                        resolve(data)
+                    })
+                    .catch(error => {
+                        this.$Notify({
+                            title: 'Request',
+                            type: 'error',
+                            message: ['Reject', 'Name : ' + _.truncate(this.requestName)].join('\n'),
+                            duration: 12000
+                        })
+                        reject(error)
+                    })
+            })
         },
         openSocket() {
             this.ws = new WebSocket([this.$store.state.api.ws, 'stream?streams=', this.streamName].join(''))
             this.ws.addEventListener('open', () => {
                 this.loading = false
                 this.connected = true
+                this.$Notify({
+                    title: 'Socket',
+                    type: 'success',
+                    message: ['Already open', 'Stream : ' + this.streamName].join('\n'),
+                    duration: 6000
+                })
             })
             this.ws.addEventListener('message', ({ data }) => {
                 if (this.listenOnSocket) {
@@ -103,6 +136,12 @@ export default {
             this.ws.addEventListener('error', e => {
                 this.ws.close()
                 console.log(e)
+                this.$Notify({
+                    title: 'Socket',
+                    type: 'error',
+                    message: 'Has error occurred',
+                    duration: 12000
+                })
             })
             this.ws.addEventListener('close', () => {
                 this.loading = false

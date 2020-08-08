@@ -36,7 +36,7 @@
                         </div>
                     </div>
                     <div class="watch-box">
-                        <div class="row"></div>
+                        <div class="row">op</div>
                     </div>
                     <div class="watch-footer row">
                         <at-button
@@ -115,7 +115,7 @@
                 <at-card :no-hover="true">
                     <h4 slot="title">Bot</h4>
                     <div slot="extra">
-                        <i class="icon icon-shopping-cart primary-color"></i>
+                        <i class="icon icon-watch primary-color"></i>
                     </div>
                     <div>
                         <div class="row at-row">
@@ -291,15 +291,27 @@ export default {
         }
     },
     computed: {
-        streamName1() {
+        requestName() {
+            return [
+                'api/v3/klines?symbol=',
+                this.baseSymbol,
+                this.quoteSymbol,
+                '&interval=1m',
+                '&startTime=',
+                moment()
+                    .subtract(60, 'minutes')
+                    .valueOf()
+            ].join('')
+        },
+        streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
         }
     },
     mounted() {
         // this.toggleConnection()
-        this.fetchMyCoin()
-        this.fetchMyOpenOrder()
-        this.fetchMyTrade()
+        // this.fetchMyCoin()
+        // this.fetchMyOpenOrder()
+        // this.fetchMyTrade()
     },
     methods: {
         reset() {
@@ -323,8 +335,11 @@ export default {
             }
             this.history = {}
         },
-        listenOnSocket({ data }) {
-            console.log(data)
+        listenOnSocket({ data: { k: timefream } }) {
+            console.log('listenOnSocket', timefream)
+        },
+        listenOnRest(data) {
+            console.log('listenOnRest', data)
         },
         fetchMyCoin() {
             this.signRequest('get', 'sapi/v1/capital/config/getall').then(({ status, data }) => {
