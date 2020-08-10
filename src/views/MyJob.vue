@@ -36,8 +36,39 @@
                         </div>
                     </div>
                     <div class="watch-box">
-                        <div class="row">
-                            <pre>{{ candles }}</pre>
+                        <div class="row" ref="candleBox">
+                            <div class="candle-box">
+                                <div
+                                    v-for="candle in candles"
+                                    :key="candle.key"
+                                    class="candle"
+                                    :class="candle.chain.status ? 'green' : 'red'"
+                                    @click="
+                                        $Notify({
+                                            title: 'Timefream',
+                                            type: candle.chain.status ? 'success' : 'error',
+                                            message: [
+                                                'From : ' + candle.from,
+                                                'To : ' + candle.to,
+                                                'High : ' + candle.high,
+                                                'Open : ' + candle.open,
+                                                'Close : ' + candle.close,
+                                                'Low : ' + candle.low
+                                            ].join('\n'),
+                                            duration: 20000
+                                        })
+                                    "
+                                >
+                                    <span class="area" :style="candlePositionStyle([candle.weightMoveAvg])"></span>
+                                    <span class="line" :style="candlePositionStyle([candle.high, candle.low])"></span>
+                                    <span class="bar" :style="candlePositionStyle([candle.open, candle.close])"></span>
+                                </div>
+                                <div class="current" :style="candlePositionStyle([lastPrice])">
+                                    <span class="item">
+                                        <span v-html="betterNumber(lastPrice)"></span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="watch-footer row">
@@ -140,24 +171,59 @@
                             </div>
                             <div class="row col">
                                 <div class="col-24 at-row">
-                                    <at-input :value="bot.profit + ' ' + quoteSymbol" icon="trending-up" disabled>
+                                    <at-input :value="bot.minProfit + ' ' + quoteSymbol" icon="trending-up" disabled>
                                         <template slot="prepend">
-                                            <span>Current profit</span>
+                                            <span>Current min profit</span>
                                         </template>
                                     </at-input>
                                 </div>
                                 <div class="col-24">
                                     <at-input
-                                        v-model="bot.keep.profit"
-                                        :placeholder="`Profit as ${quoteSymbol}`"
-                                        @keyup.enter.native="setBotProfit"
+                                        v-model="bot.keep.minProfit"
+                                        :placeholder="`Min profit as ${quoteSymbol}`"
+                                        @keyup.enter.native="setBotMinProfit"
                                         icon="trending-up"
                                     ></at-input>
                                 </div>
                             </div>
+                            <div class="row col">
+                                <div class="col-24 at-row">
+                                    <at-input :value="bot.stoploss + ' ' + quoteSymbol" icon="trending-down" disabled>
+                                        <template slot="prepend">
+                                            <span>Current stoploss</span>
+                                        </template>
+                                    </at-input>
+                                </div>
+                                <div class="col-24">
+                                    <at-input
+                                        v-model="bot.keep.stoploss"
+                                        :placeholder="`Stoploss as ${quoteSymbol}`"
+                                        @keyup.enter.native="setBotStoploss"
+                                        icon="trending-down"
+                                    ></at-input>
+                                </div>
+                            </div>
+                            <div class="row col">
+                                <div class="col-24 at-row">
+                                    <at-input :value="bot.state" icon="activity" disabled>
+                                        <template slot="prepend">
+                                            <span>Current state</span>
+                                        </template>
+                                    </at-input>
+                                </div>
+                                <div class="col-24">
+                                    <at-select v-model="bot.state" placeholder="Quote">
+                                        <at-option value="off">Shut down</at-option>
+                                        <at-option value="test">Test mode</at-option>
+                                        <at-option value="start">Start</at-option>
+                                    </at-select>
+                                </div>
+                            </div>
                         </div>
                         <div class="row at-row">
-                            <div class="col"></div>
+                            <div class="col">
+                                <pre>{{ bot.result }}</pre>
+                            </div>
                         </div>
                     </div>
                 </at-card>
@@ -263,6 +329,7 @@ export default {
     components: { ConnectionCardHeaderTitle, ConnectionCardHeaderExtra },
     data() {
         return {
+            amir: 'off',
             myCoin: {
                 base: {
                     free: 0,
@@ -284,13 +351,27 @@ export default {
             keepCandles: {},
             bot: {
                 fund: 0,
-                profit: 0,
+                minProfit: 0,
+                stoploss: 0,
+                state: 'off',
+                result: {
+                    trade: [],
+                    profit: [],
+                    loss: []
+                },
                 keep: {
                     fund: null,
-                    profit: null
+                    minProfit: null,
+                    stoploss: null
                 }
-            },
-            history: {}
+            }
+        }
+    },
+    watch: {
+        candles() {
+            this.$nextTick(() => {
+                this.$refs.candleBox.scrollLeft = this.$refs.candleBox.scrollWidth
+            })
         }
     },
     computed: {
@@ -299,19 +380,20 @@ export default {
                 'api/v3/klines?symbol=',
                 this.baseSymbol,
                 this.quoteSymbol,
-                '&interval=1m',
-                '&limit=59',
+                '&interval=15m',
+                '&limit=191',
                 '&startTime=',
                 moment()
-                    .subtract(60, 'minutes')
+                    .subtract(2, 'days')
                     .valueOf()
             ].join('')
         },
         streamName() {
-            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_1m'].join('')
+            return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_15m'].join('')
         },
         candles() {
-            let timefream = _.take(_.reverse(_.keys(this.keepCandles)), 30)
+            // let timefream = _.take(_.reverse(_.keys(this.keepCandles)), 30)
+            let timefream = _.reverse(_.keys(this.keepCandles))
             return _.map(timefream, (key, index) => {
                 let current = this.keepCandles[key]
                 current.key = key
@@ -337,21 +419,34 @@ export default {
                     return { open, close, volume }
                 })
                 let sumMoveAvgVolume = _.sum(_.map(moveAvg, 'volume'))
-                if (
-                    current.close >
-                    _.floor(_.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumMoveAvgVolume)), 6)
-                ) {
+                current.weightMoveAvg = _.floor(
+                    _.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumMoveAvgVolume)),
+                    6
+                )
+                if (current.close > current.weightMoveAvg) {
                     current.chain.state = true
                 }
                 return current
             })
+        },
+        maxOfCandles() {
+            return _.max(_.map(this.candles, 'high'))
+        },
+        minOfCandles() {
+            return _.min(_.map(this.candles, 'low'))
+        },
+        offsetOfCandles() {
+            return this.maxOfCandles - this.minOfCandles
+        },
+        lastPrice() {
+            return _.get(_.head(this.candles), 'close', 0)
         }
     },
     mounted() {
         this.toggleConnection()
-        // this.fetchMyCoin()
-        // this.fetchMyOpenOrder()
-        // this.fetchMyTrade()
+        this.fetchMyCoin()
+        this.fetchMyOpenOrder()
+        this.fetchMyTrade()
     },
     methods: {
         reset() {
@@ -374,7 +469,6 @@ export default {
                     quote: 0
                 }
             }
-            this.history = {}
         },
         listenOnSocket({ data: { k: timefream } }) {
             this.updateKeepCandles(
@@ -404,16 +498,31 @@ export default {
                 )
             })
         },
-        updateKeepCandles(open, hight, low, close, volume, trade, from, to, closed) {
-            this.$set(this.keepCandles, [moment(from).format('HH:mm:ss'), moment(to).format('HH:mm:ss')].join('-'), {
-                open: _.floor(_.toNumber(open), 6),
-                hight: _.floor(_.toNumber(hight), 6),
-                low: _.floor(_.toNumber(low), 6),
-                close: _.floor(_.toNumber(close), 6),
-                volume: _.floor(_.toNumber(volume), 6),
-                trade,
-                closed
-            })
+        candlePositionStyle(input = [0]) {
+            let pos = {
+                top: `${200 - ((_.max(input) - this.minOfCandles) * 200) / this.offsetOfCandles}px`
+            }
+            if (input.length > 1) {
+                pos.bottom = `${((_.min(input) - this.minOfCandles) * 200) / this.offsetOfCandles}px`
+            }
+            return pos
+        },
+        updateKeepCandles(open, high, low, close, volume, trade, from, to, closed) {
+            this.$set(
+                this.keepCandles,
+                [moment(from).format('MMDDHHmmss'), moment(to).format('MMDDHHmmss')].join('-'),
+                {
+                    from: moment(from).format('MM-DD HH:mm:ss'),
+                    to: moment(to).format('MM-DD HH:mm:ss'),
+                    open: _.floor(_.toNumber(open), 6),
+                    high: _.floor(_.toNumber(high), 6),
+                    low: _.floor(_.toNumber(low), 6),
+                    close: _.floor(_.toNumber(close), 6),
+                    volume: _.floor(_.toNumber(volume), 6),
+                    trade,
+                    closed
+                }
+            )
         },
         fetchMyCoin() {
             this.signRequest('get', 'sapi/v1/capital/config/getall').then(({ status, data }) => {
@@ -434,8 +543,11 @@ export default {
                         if (this.bot.fund === 0) {
                             this.bot.fund = _.floor(_.toNumber(this.myCoin.quote.free) * 0.2, 6)
                         }
-                        if (this.bot.profit === 0) {
-                            this.bot.profit = _.floor(_.toNumber(this.myCoin.quote.free) * 0.02, 6)
+                        if (this.bot.minProfit === 0) {
+                            this.bot.minProfit = _.floor(_.toNumber(this.myCoin.quote.free) * 0.02, 6)
+                        }
+                        if (this.bot.stoploss === 0) {
+                            this.bot.stoploss = this.bot.minProfit * -1
                         }
                     }
                 }
@@ -514,10 +626,16 @@ export default {
                 this.bot.fund = number
             }
         },
-        setBotProfit() {
-            let number = _.toNumber(this.bot.keep.profit)
+        setBotMinProfit() {
+            let number = _.toNumber(this.bot.keep.minProfit)
             if (number > 0) {
-                this.bot.profit = number
+                this.bot.minProfit = number
+            }
+        },
+        setBotStoploss() {
+            let number = _.toNumber(this.bot.keep.stoploss)
+            if (number > 0) {
+                this.bot.stoploss = number
             }
         }
     }
@@ -543,6 +661,111 @@ export default {
             justify-content: center;
             flex: 1;
             margin: 4px;
+        }
+    }
+
+    .watch-box {
+        justify-content: flex-start;
+        align-items: flex-start;
+        height: 236px;
+        overflow: hidden;
+
+        .row {
+            margin: 0;
+            height: 251px;
+            min-width: 100%;
+            padding: 16px;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .candle-box {
+            position: relative;
+            display: flex;
+            flex-wrap: nowrap;
+            flex-direction: row-reverse;
+            margin: 0;
+            padding: 0 100px;
+            flex: 1;
+
+            .current {
+                position: absolute;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                top: 0;
+                bottom: auto;
+                left: 0px;
+                right: 0px;
+                height: 0;
+                border-top: dashed 1px #ffc82c;
+                transition: top 1000ms linear;
+
+                .item {
+                    position: relative;
+                    width: 100px;
+                    top: -1px;
+                    padding: 0 8px;
+                    box-sizing: border-box;
+                    font-size: 10px;
+
+                    > span {
+                        background: #ffc82c;
+                        padding: 1px 4px 2px;
+                        color: #0b0e11;
+                        border-radius: 4px;
+                    }
+                }
+            }
+        }
+
+        .candle {
+            position: relative;
+            width: 7px;
+            height: 200px;
+
+            .line {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 3px;
+                right: 3px;
+            }
+
+            .bar {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 1px;
+                right: 1px;
+                border-radius: 5px;
+            }
+
+            .area {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(0deg, rgba(0, 0, 0, 0) 50%, #78a4fa);
+                border-radius: 2px 2px 0 0;
+                opacity: 0.25;
+            }
+
+            &.green {
+                .line,
+                .bar {
+                    background: #13ce66;
+                }
+            }
+
+            &.red {
+                .line,
+                .bar {
+                    background: #ff4949;
+                }
+            }
         }
     }
 
