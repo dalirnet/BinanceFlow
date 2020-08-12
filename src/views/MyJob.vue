@@ -44,41 +44,51 @@
                     <div class="watch-box">
                         <div class="row" ref="candleBox">
                             <div class="candle-box">
-                                <div
-                                    v-for="(candle, index) in candles"
-                                    :key="candle.key"
-                                    class="candle"
-                                    :class="[
-                                        candle.chain.status ? 'green' : 'red',
-                                        index == bot.pointer ? 'pointer' : null
-                                    ]"
-                                    @click="
-                                        $Notify({
-                                            title: 'Timefream',
-                                            type: 'info',
-                                            message: [
-                                                'From : ' + candle.from,
-                                                'To : ' + candle.to,
-                                                'High : ' + candle.high,
-                                                'Open : ' + candle.open,
-                                                'Close : ' + candle.close,
-                                                'Low : ' + candle.low
-                                            ].join('\n'),
-                                            duration: 20000
-                                        })
-                                    "
-                                >
-                                    <span
-                                        class="area"
-                                        :style="candlePositionStyle([candle.weightMoveAvg, minOfCandles])"
-                                    ></span>
-                                    <span class="line" :style="candlePositionStyle([candle.high, candle.low])"></span>
-                                    <span class="bar" :style="candlePositionStyle([candle.open, candle.close])"></span>
-                                </div>
-                                <div class="current" :style="candlePositionStyle([currentCandelPrice])">
-                                    <span class="item">
-                                        <span v-html="betterNumber(currentCandelPrice)"></span>
-                                    </span>
+                                <div class="candle-box-inner" v-if="!botUnderTesting">
+                                    <div
+                                        v-for="(candle, index) in candles"
+                                        :key="candle.key"
+                                        class="candle"
+                                        :class="[
+                                            candle.chain.status ? 'green' : 'red',
+                                            index == bot.pointer ? 'pointer' : null,
+                                            includeKey(botBuyTradeKeys, candle.key) ? 'buy' : null,
+                                            includeKey(botSellTradeKeys, candle.key) ? 'sell' : null
+                                        ]"
+                                        @click="
+                                            $Notify({
+                                                title: 'Timefream',
+                                                type: 'info',
+                                                message: [
+                                                    'From : ' + candle.from,
+                                                    'To : ' + candle.to,
+                                                    'High : ' + candle.high,
+                                                    'Open : ' + candle.open,
+                                                    'Close : ' + candle.close,
+                                                    'Low : ' + candle.low
+                                                ].join('\n'),
+                                                duration: 20000
+                                            })
+                                        "
+                                    >
+                                        <span
+                                            class="area"
+                                            :style="candlePositionStyle([candle.weightMoveAvg, minOfCandles])"
+                                        ></span>
+                                        <span
+                                            class="line"
+                                            :style="candlePositionStyle([candle.high, candle.low])"
+                                        ></span>
+                                        <span
+                                            class="bar"
+                                            :style="candlePositionStyle([candle.open, candle.close])"
+                                        ></span>
+                                    </div>
+                                    <div class="current" :style="candlePositionStyle([currentCandelPrice])">
+                                        <span class="item">
+                                            <span v-html="betterNumber(currentCandelPrice)"></span>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -267,39 +277,61 @@
                         <div class="row">
                             <div class="col flex">
                                 <at-button type="success" hollow>
+                                    <span>{{ bot.trade.buy.length }}</span>
+                                    <span class="space"></span>
                                     <span>Buy</span>
                                     <span class="space"></span>
-                                    <span>{{ bot.trade.buy.length }}</span>
+                                    <small>Order</small>
                                 </at-button>
                             </div>
                             <div class="col flex">
                                 <at-button type="error" hollow>
+                                    <span>{{ bot.trade.sell.length }}</span>
+                                    <span class="space"></span>
                                     <span>Sell</span>
                                     <span class="space"></span>
-                                    <span>{{ bot.trade.sell.length }}</span>
+                                    <small>Order</small>
                                 </at-button>
                             </div>
                             <div class="col flex">
                                 <at-button type="success" hollow>
+                                    <span v-html="betterNumber(botTrade.profit.value)"></span>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                    <span class="space"></span>
                                     <span>Profit</span>
                                     <span class="space"></span>
-                                    <span>0</span>
+                                    <small>in</small>
+                                    <span class="space"></span>
+                                    <span>{{ botTrade.profit.count }}</span>
+                                    <span class="space"></span>
+                                    <small>Trade</small>
                                 </at-button>
                             </div>
                             <div class="col flex">
                                 <at-button type="error" hollow>
+                                    <span v-html="betterNumber(botTrade.loss.value)"></span>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                    <span class="space"></span>
                                     <span>Loss</span>
                                     <span class="space"></span>
-                                    <span>0</span>
+                                    <small>in</small>
+                                    <span class="space"></span>
+                                    <span>{{ botTrade.loss.count }}</span>
+                                    <span class="space"></span>
+                                    <small>Trade</small>
                                 </at-button>
                             </div>
-                        </div>
-                        <div class="row">
-                            <pre>{{ bot.trade.buy }}</pre>
-                        </div>
-                        <hr />
-                        <div class="row">
-                            <pre>{{ bot.trade.sell }}</pre>
+                            <div class="col flex">
+                                <at-button type="success" hollow>
+                                    <small>Remaining</small>
+                                    <span class="space"></span>
+                                    <span v-html="betterNumber(botTrade.profit.value - botTrade.loss.value)"></span>
+                                    <span class="space"></span>
+                                    <small>{{ quoteSymbol }}</small>
+                                </at-button>
+                            </div>
                         </div>
                     </div>
                 </at-card>
@@ -451,6 +483,7 @@ export default {
                 profit: this.$store.getters['botProfit'],
                 stoploss: this.$store.getters['botStoploss'],
                 timefream: this.$store.getters['botTimefream'],
+                limit: 120,
                 status: 'stop',
                 pointer: 0,
                 keep: {
@@ -463,8 +496,7 @@ export default {
                     side: 'buy',
                     rate: 0,
                     amount: 0,
-                    type: null,
-                    timefream: null
+                    key: null
                 },
                 trade: {
                     buy: [],
@@ -483,22 +515,6 @@ export default {
         }
     },
     computed: {
-        botTimefreamValue() {
-            return _.replace(this.bot.timefream, /[^0-9]/g, '')
-        },
-        botTimefreamPeriod() {
-            return _.get(
-                {
-                    m: 'minutes',
-                    h: 'hours',
-                    d: 'days'
-                },
-                _.replace(this.bot.timefream, /[0-9]/g, '')
-            )
-        },
-        botUnderTesting() {
-            return this.bot.status === 'test'
-        },
         requestName() {
             return [
                 'api/v3/klines?symbol=',
@@ -506,10 +522,11 @@ export default {
                 this.quoteSymbol,
                 '&interval=',
                 this.bot.timefream,
-                '&limit=120',
+                '&limit=',
+                this.bot.limit,
                 '&startTime=',
                 moment()
-                    .subtract(this.botTimefreamValue * 120, this.botTimefreamPeriod)
+                    .subtract(this.botTimefreamValue * this.bot.limit, this.botTimefreamPeriod)
                     .valueOf()
             ].join('')
         },
@@ -517,7 +534,7 @@ export default {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_', this.bot.timefream].join('')
         },
         candles() {
-            let timefream = _.take(_.reverse(_.keys(this.keepCandles)), 120)
+            let timefream = _.take(_.reverse(_.keys(this.keepCandles)), this.bot.limit)
             return _.map(timefream, (key, index) => {
                 let current = this.keepCandles[key]
                 current.key = key
@@ -582,6 +599,53 @@ export default {
         },
         currentCandelPrice() {
             return _.get(this.currentCandel, 'close', 0)
+        },
+        botTimefreamValue() {
+            return _.replace(this.bot.timefream, /[^0-9]/g, '')
+        },
+        botTimefreamPeriod() {
+            return _.get(
+                {
+                    m: 'minutes',
+                    h: 'hours',
+                    d: 'days'
+                },
+                _.replace(this.bot.timefream, /[0-9]/g, '')
+            )
+        },
+        botUnderTesting() {
+            return this.bot.status === 'test'
+        },
+        botTrade() {
+            let out = {
+                profit: {
+                    count: 0,
+                    value: 0
+                },
+                loss: {
+                    count: 0,
+                    value: 0
+                }
+            }
+            _.forEach(this.bot.trade.buy, (buy, index) => {
+                let sell = _.get(this.bot.trade.sell, index, false)
+                if (sell) {
+                    if (sell.total > buy.total) {
+                        out.profit.count++
+                        out.profit.value += sell.total - buy.total
+                    } else {
+                        out.loss.count++
+                        out.loss.value += buy.total - sell.total
+                    }
+                }
+            })
+            return out
+        },
+        botBuyTradeKeys() {
+            return _.map(this.bot.trade.buy, 'key')
+        },
+        botSellTradeKeys() {
+            return _.map(this.bot.trade.sell, 'key')
         }
     },
     methods: {
@@ -798,29 +862,30 @@ export default {
                 side: 'buy',
                 rate: 0,
                 amount: 0,
-                type: null,
-                timefream: null
+                key: null
             }
             this.bot.trade.buy = []
             this.bot.trade.sell = []
             let count = this.candles.length - 1
-            this.$nextTick(() => {
+            this.$nextTick(async () => {
                 for (let i = 0; i <= count; i++) {
-                    setTimeout(() => {
-                        this.bot.pointer = count - i
-                        if (i == count) {
-                            this.$nextTick(() => {
-                                this.bot.status = 'stop'
-                                this.$Notify({
-                                    title: 'Bot',
-                                    type: 'success',
-                                    message: 'Test compelete',
-                                    duration: 6000
-                                })
-                            })
-                        }
-                    }, i * 100)
+                    await this.movePointer(count - i)
                 }
+                this.bot.status = 'stop'
+                this.$Notify({
+                    title: 'Bot',
+                    type: 'success',
+                    message: 'Test compelete',
+                    duration: 6000
+                })
+            })
+        },
+        movePointer(pointer) {
+            return new Promise(resolve => {
+                this.bot.pointer = pointer
+                this.$nextTick(() => {
+                    resolve()
+                })
             })
         },
         flow(current) {
@@ -830,46 +895,46 @@ export default {
                     if (this.bot.flow.rate >= current.low && this.bot.flow.rate <= current.high) {
                         this.bot.flow.order = false
                         if (this.bot.flow.side === 'sell') {
-                            this.bot.trade.sell.push(
-                                _.cloneDeep({
-                                    rate: this.bot.flow.rate,
-                                    amount: this.bot.flow.amount,
-                                    total: this.bot.flow.rate * this.bot.flow.amount,
-                                    type: this.bot.flow.type,
-                                    timefream: this.bot.flow.timefream
-                                })
-                            )
+                            this.bot.trade.sell.push({
+                                key: this.bot.flow.key,
+                                rate: this.bot.flow.rate,
+                                amount: this.bot.flow.amount,
+                                total: this.bot.flow.rate * this.bot.flow.amount
+                            })
                             this.bot.flow.side = 'buy'
                             this.bot.flow.rate = 0
                             this.bot.flow.amount = 0
-                            this.bot.flow.type = null
-                            this.bot.flow.timefream = null
+                            this.bot.flow.key = null
                         } else {
-                            this.bot.trade.buy.push(
-                                _.cloneDeep({
-                                    rate: this.bot.flow.rate,
-                                    amount: this.bot.flow.amount,
-                                    total: this.bot.flow.rate * this.bot.flow.amount,
-                                    type: this.bot.flow.type,
-                                    timefream: this.bot.flow.timefream
-                                })
-                            )
+                            this.bot.trade.buy.push({
+                                key: this.bot.flow.key,
+                                rate: this.bot.flow.rate,
+                                amount: this.bot.flow.amount,
+                                total: this.bot.flow.rate * this.bot.flow.amount
+                            })
                             this.bot.flow.side = 'sell'
                         }
                     }
                 } else {
                     if (this.bot.flow.side === 'sell' && !current.chain.status) {
-                        let sellWithProfit =
+                        if (current.from == '08-13 01:59:00') {
+                            console.log('this', current)
+                        }
+                        if (
                             prev.chain.status &&
                             prev.chain.length > 2 &&
                             current.close * this.bot.flow.amount >
                                 this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
-                        let sellForStoploss =
+                        ) {
+                            this.bot.flow.rate = current.close
+                            this.bot.flow.key = current.key
+                            this.bot.flow.order = true
+                        } else if (
                             current.close * this.bot.flow.amount <
                             this.bot.flow.rate * this.bot.flow.amount - this.bot.stoploss
-                        if (sellWithProfit || sellForStoploss) {
+                        ) {
                             this.bot.flow.rate = current.close
-                            this.bot.flow.timefream = current
+                            this.bot.flow.key = current.key
                             this.bot.flow.order = true
                         }
                     } else if (
@@ -885,12 +950,15 @@ export default {
                         if (rate >= current.open && rate <= current.close) {
                             this.bot.flow.rate = rate
                             this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
-                            this.bot.flow.timefream = current
+                            this.bot.flow.key = current.key
                             this.bot.flow.order = true
                         }
                     }
                 }
             }
+        },
+        includeKey(array, key) {
+            return _.includes(array, key)
         }
     }
 }
@@ -917,17 +985,24 @@ export default {
             box-sizing: border-box;
             scroll-behavior: smooth;
             flex: 1;
+            overflow-x: auto;
         }
 
         .candle-box {
             position: relative;
             display: flex;
-            flex-wrap: nowrap;
-            flex-direction: row-reverse;
-            margin: 0;
-            padding: 0 100px;
             flex: 1;
             min-height: 200px;
+
+            .candle-box-inner {
+                position: relative;
+                display: flex;
+                flex-wrap: nowrap;
+                flex-direction: row-reverse;
+                margin: 0;
+                padding: 0 100px;
+                flex: 1;
+            }
 
             .current {
                 position: absolute;
@@ -1018,6 +1093,28 @@ export default {
                     rgba(240, 185, 11, 0.2),
                     rgba(240, 185, 11, 0.6)
                 );
+            }
+
+            &.buy {
+                background: linear-gradient(
+                    0deg,
+                    rgba(19, 206, 102, 0.4),
+                    rgba(19, 206, 102, 0.2),
+                    rgba(19, 206, 102, 0.1),
+                    rgba(19, 206, 102, 0.2),
+                    rgba(19, 206, 102, 0.4)
+                ) !important;
+            }
+
+            &.sell {
+                background: linear-gradient(
+                    0deg,
+                    rgba(255, 73, 73, 0.4),
+                    rgba(255, 73, 73, 0.2),
+                    rgba(255, 73, 73, 0.1),
+                    rgba(255, 73, 73, 0.2),
+                    rgba(255, 73, 73, 0.4)
+                ) !important;
             }
         }
     }
