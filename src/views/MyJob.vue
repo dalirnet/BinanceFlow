@@ -269,30 +269,37 @@
                                 <at-button type="success" hollow>
                                     <span>Buy</span>
                                     <span class="space"></span>
-                                    <span>{{ bot.result.trade.buy.length }}</span>
+                                    <span>{{ bot.trade.buy.length }}</span>
                                 </at-button>
                             </div>
                             <div class="col flex">
                                 <at-button type="error" hollow>
                                     <span>Sell</span>
                                     <span class="space"></span>
-                                    <span>{{ bot.result.trade.sell.length }}</span>
+                                    <span>{{ bot.trade.sell.length }}</span>
                                 </at-button>
                             </div>
                             <div class="col flex">
                                 <at-button type="success" hollow>
                                     <span>Profit</span>
                                     <span class="space"></span>
-                                    <span>{{ bot.result.profit }}</span>
+                                    <span>0</span>
                                 </at-button>
                             </div>
                             <div class="col flex">
                                 <at-button type="error" hollow>
                                     <span>Loss</span>
                                     <span class="space"></span>
-                                    <span>{{ bot.result.loss }}</span>
+                                    <span>0</span>
                                 </at-button>
                             </div>
+                        </div>
+                        <div class="row">
+                            <pre>{{ bot.trade.buy }}</pre>
+                        </div>
+                        <hr />
+                        <div class="row">
+                            <pre>{{ bot.trade.sell }}</pre>
                         </div>
                     </div>
                 </at-card>
@@ -452,17 +459,16 @@ export default {
                     stoploss: null
                 },
                 flow: {
+                    order: false,
                     side: 'buy',
                     rate: 0,
-                    amount: 0
+                    amount: 0,
+                    type: null,
+                    timefream: null
                 },
-                result: {
-                    trade: {
-                        buy: [],
-                        sell: []
-                    },
-                    profit: [],
-                    loss: []
+                trade: {
+                    buy: [],
+                    sell: []
                 }
             }
         }
@@ -681,18 +687,6 @@ export default {
                             free: quote.free,
                             locked: quote.locked
                         }
-                        if (this.bot.fund === 0) {
-                            this.bot.fund = _.floor(_.toNumber(this.myCoin.quote.free) * 0.5, 6)
-                            this.$store.commit('botFund', this.bot.fund)
-                        }
-                        if (this.bot.profit === 0) {
-                            this.bot.profit = _.floor(_.toNumber(this.myCoin.quote.free) * 0.05, 6)
-                            this.$store.commit('botProfit', this.bot.profit)
-                        }
-                        if (this.bot.stoploss === 0) {
-                            this.bot.stoploss = this.bot.profit * -1
-                            this.$store.commit('botStoploss', this.bot.stoploss)
-                        }
                     }
                 }
             })
@@ -799,17 +793,16 @@ export default {
             }
         },
         botTest() {
-            this.bot.result = {
-                trade: {
-                    buy: [],
-                    sell: []
-                },
-                profit: [],
-                loss: []
+            this.bot.flow = {
+                order: false,
+                side: 'buy',
+                rate: 0,
+                amount: 0,
+                type: null,
+                timefream: null
             }
-            this.$store.commit('flowSide', 'buy')
-            this.$store.commit('flowRate', 0)
-            this.$store.commit('flowAmount', 0)
+            this.bot.trade.buy = []
+            this.bot.trade.sell = []
             let count = this.candles.length - 1
             this.$nextTick(() => {
                 for (let i = 0; i <= count; i++) {
@@ -833,26 +826,69 @@ export default {
         flow(current) {
             let prev = _.get(this.keepCandles, current.prevKey, false)
             if (prev) {
-                if (current.chain.status != prev.chain.status && prev.chain.length >= 2) {
-                    // let side = this.$store.getters['flowSide']
-                    // if (side === 'buy') {
-                    //     this.bot.result.trade.buy.push('1')
-                    //     this.$store.commit('flowSide', 'sell')
-                    // } else {
-                    //     this.bot.result.trade.sell.push('1')
-                    //     this.$store.commit('flowSide', 'buy')
-                    // }
-                    // console.log('signal', this.$store.getters['flowSide'])
-                    // if (flow.allow.buy && timefream.chain.status && timefream.high < timefream.weightMoveAvg) {
-                    //     // flow.rate = prevTimeFream.chain.to + prevTimeFream.chain.space * 0.2
-                    //     console.log('buy', timefream)
-                    //     flow.allow.buy = false
-                    //     flow.allow.sell = true
-                    // } else if (flow.allow.sell && !timefream.chain.status) {
-                    //     console.log('sell', timefream)
-                    //     flow.allow.buy = true
-                    //     flow.allow.sell = false
-                    // }
+                if (this.bot.flow.order) {
+                    if (this.bot.flow.rate >= current.low && this.bot.flow.rate <= current.high) {
+                        this.bot.flow.order = false
+                        if (this.bot.flow.side === 'sell') {
+                            this.bot.trade.sell.push(
+                                _.cloneDeep({
+                                    rate: this.bot.flow.rate,
+                                    amount: this.bot.flow.amount,
+                                    total: this.bot.flow.rate * this.bot.flow.amount,
+                                    type: this.bot.flow.type,
+                                    timefream: this.bot.flow.timefream
+                                })
+                            )
+                            this.bot.flow.side = 'buy'
+                            this.bot.flow.rate = 0
+                            this.bot.flow.amount = 0
+                            this.bot.flow.type = null
+                            this.bot.flow.timefream = null
+                        } else {
+                            this.bot.trade.buy.push(
+                                _.cloneDeep({
+                                    rate: this.bot.flow.rate,
+                                    amount: this.bot.flow.amount,
+                                    total: this.bot.flow.rate * this.bot.flow.amount,
+                                    type: this.bot.flow.type,
+                                    timefream: this.bot.flow.timefream
+                                })
+                            )
+                            this.bot.flow.side = 'sell'
+                        }
+                    }
+                } else {
+                    if (this.bot.flow.side === 'sell' && !current.chain.status) {
+                        let sellWithProfit =
+                            prev.chain.status &&
+                            prev.chain.length > 2 &&
+                            current.close * this.bot.flow.amount >
+                                this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
+                        let sellForStoploss =
+                            current.close * this.bot.flow.amount <
+                            this.bot.flow.rate * this.bot.flow.amount - this.bot.stoploss
+                        if (sellWithProfit || sellForStoploss) {
+                            this.bot.flow.rate = current.close
+                            this.bot.flow.timefream = current
+                            this.bot.flow.order = true
+                        }
+                    } else if (
+                        this.bot.flow.side === 'buy' &&
+                        current.chain.status &&
+                        current.chain.body > current.chain.shadow &&
+                        current.high < current.weightMoveAvg &&
+                        !prev.chain.status &&
+                        prev.chain.length > 2 &&
+                        prev.high < prev.weightMoveAvg
+                    ) {
+                        let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.15, 6)
+                        if (rate >= current.open && rate <= current.close) {
+                            this.bot.flow.rate = rate
+                            this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
+                            this.bot.flow.timefream = current
+                            this.bot.flow.order = true
+                        }
+                    }
                 }
             }
         }

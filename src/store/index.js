@@ -26,13 +26,13 @@ export default new Vuex.Store({
     },
     getters: {
         botFund(state) {
-            return _.get(state.bot.fund, [state.pair.base, state.pair.quote].join(''), 0)
+            return _.get(state.bot.fund, [state.pair.base, state.pair.quote].join(''), 100)
         },
         botProfit(state) {
-            return _.get(state.bot.profit, [state.pair.base, state.pair.quote].join(''), 0)
+            return _.get(state.bot.profit, [state.pair.base, state.pair.quote].join(''), 5)
         },
         botStoploss(state) {
-            return _.get(state.bot.stoploss, [state.pair.base, state.pair.quote].join(''), 0)
+            return _.get(state.bot.stoploss, [state.pair.base, state.pair.quote].join(''), 5)
         },
         botTimefream(state) {
             return _.get(state.bot.timefream, [state.pair.base, state.pair.quote].join(''), '1m')
