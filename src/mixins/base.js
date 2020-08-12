@@ -47,11 +47,15 @@ export default {
     mounted() {
         this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', ''))
         this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', ''))
-        // this.toggleConnection()
+        this.toggleConnection()
     },
     methods: {
+        fixFloatNumber(input) {
+            return Number.parseFloat(input).toFixed(6)
+        },
         betterNumber(input) {
-            let [intValue = '0', floatValue = '00'] = _.split(Number.parseFloat(input).toFixed(6), '.')
+            let number = this.fixFloatNumber(input)
+            let [intValue = '0', floatValue = '00'] = _.split(number === '-0.000000' ? 0 : number, '.')
             return [
                 '<strong>',
                 _.replace(intValue, /\B(?=(\d{3})+(?!\d))/g, ','),
@@ -62,12 +66,13 @@ export default {
                 '</small>'
             ].join('')
         },
-        toggleConnection() {
+        toggleConnection(refresh = false) {
             if (!this.loading) {
                 this.loading = true
-                if (this.connected) {
+                if (refresh) {
                     this.closeSocket()
-                } else {
+                }
+                if (!this.connected) {
                     if (this.reset) {
                         this.reset()
                     }
@@ -81,6 +86,7 @@ export default {
                                     this.openSocket()
                                 } else {
                                     this.loading = false
+                                    this.connected = true
                                 }
                             })
                             .catch(e => {
@@ -90,6 +96,8 @@ export default {
                     } else if (this.streamName) {
                         this.openSocket()
                     }
+                } else {
+                    this.closeSocket()
                 }
             }
         },
@@ -129,13 +137,13 @@ export default {
                 })
             })
             this.ws.addEventListener('message', ({ data }) => {
-                if (this.listenOnSocket) {
+                if (this.connected && this.listenOnSocket) {
                     this.listenOnSocket(JSON.parse(data))
                 }
             })
             this.ws.addEventListener('error', e => {
-                this.ws.close()
                 console.log(e)
+                this.ws.close()
                 this.$Notify({
                     title: 'Socket',
                     type: 'error',
@@ -145,7 +153,6 @@ export default {
             })
             this.ws.addEventListener('close', () => {
                 this.loading = false
-                this.connected = false
             })
         },
         reOpenSocket() {
@@ -153,6 +160,7 @@ export default {
             this.openSocket()
         },
         closeSocket() {
+            this.connected = false
             if (this.ws) {
                 this.ws.close()
             }
