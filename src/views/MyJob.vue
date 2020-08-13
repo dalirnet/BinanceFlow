@@ -50,7 +50,13 @@
                                         :key="candle.key"
                                         class="candle"
                                         :class="[
-                                            candle.chain.status ? 'green' : 'red',
+                                            candle.status != candle.chain.status
+                                                ? candle.status
+                                                    ? 'greenToRed'
+                                                    : 'redToGreen'
+                                                : candle.status
+                                                ? 'green'
+                                                : 'red',
                                             index == bot.pointer ? 'pointer' : null,
                                             includeKey(botBuyOrderKeys, candle.key) ? 'buyOrder' : null,
                                             includeKey(botBuyTradeKeys, candle.key) ? 'buyTrade' : null,
@@ -88,7 +94,11 @@
                                     </div>
                                     <div class="current" :style="candlePositionStyle([currentCandelPrice])">
                                         <span class="item">
-                                            <span v-html="betterNumber(currentCandelPrice)"></span>
+                                            <span class="price" v-html="betterNumber(currentCandelPrice)"></span>
+                                            <span class="close-at">
+                                                <strong>{{ currentCandelCloseAt }}</strong>
+                                                <small> s</small>
+                                            </span>
                                         </span>
                                     </div>
                                 </div>
@@ -232,6 +242,54 @@
                             </div>
                             <div class="row col">
                                 <div class="col-24 at-row">
+                                    <at-input :value="bot.chain.downToUp" icon="trending-up" disabled>
+                                        <template slot="prepend">
+                                            <span>Chain to up</span>
+                                        </template>
+                                    </at-input>
+                                </div>
+                                <div class="col-24">
+                                    <at-select
+                                        v-model="bot.chain.downToUp"
+                                        :class="{ disabled: !connected }"
+                                        @on-change="changeBotChainDownToUp"
+                                    >
+                                        <at-option :value="1">1</at-option>
+                                        <at-option :value="2">2</at-option>
+                                        <at-option :value="3">3</at-option>
+                                        <at-option :value="4">4</at-option>
+                                        <at-option :value="5">5</at-option>
+                                        <at-option :value="6">6</at-option>
+                                    </at-select>
+                                </div>
+                            </div>
+                            <div class="row col">
+                                <div class="col-24 at-row">
+                                    <at-input :value="bot.chain.upToDown" icon="trending-down" disabled>
+                                        <template slot="prepend">
+                                            <span>Chain to down</span>
+                                        </template>
+                                    </at-input>
+                                </div>
+                                <div class="col-24">
+                                    <at-select
+                                        v-model="bot.chain.upToDown"
+                                        :class="{ disabled: !connected }"
+                                        @on-change="changeBotChainUpToDown"
+                                    >
+                                        <at-option :value="1">1</at-option>
+                                        <at-option :value="2">2</at-option>
+                                        <at-option :value="3">3</at-option>
+                                        <at-option :value="4">4</at-option>
+                                        <at-option :value="5">5</at-option>
+                                        <at-option :value="6">6</at-option>
+                                    </at-select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row at-row">
+                            <div class="row col">
+                                <div class="col-24 at-row">
                                     <at-input :value="bot.timefream" icon="clock" disabled>
                                         <template slot="prepend">
                                             <span>Timefream</span>
@@ -278,19 +336,19 @@
                         </div>
                         <div class="row">
                             <div class="col flex">
+                                <at-button type="info" hollow>
+                                    <span>Check</span>
+                                    <span class="space"></span>
+                                    <span>{{ bot.flow.check.length }}</span>
+                                    <span class="space"></span>
+                                    <small>Candles</small>
+                                </at-button>
+                            </div>
+                            <div class="col flex">
                                 <at-button type="success" hollow>
                                     <span>{{ bot.trade.buy.length }}</span>
                                     <span class="space"></span>
                                     <span>Buy</span>
-                                    <span class="space"></span>
-                                    <small>Order</small>
-                                </at-button>
-                            </div>
-                            <div class="col flex">
-                                <at-button type="error" hollow>
-                                    <span>{{ bot.trade.sell.length }}</span>
-                                    <span class="space"></span>
-                                    <span>Sell</span>
                                     <span class="space"></span>
                                     <small>Order</small>
                                 </at-button>
@@ -312,6 +370,15 @@
                             </div>
                             <div class="col flex">
                                 <at-button type="error" hollow>
+                                    <span>{{ bot.trade.sell.length }}</span>
+                                    <span class="space"></span>
+                                    <span>Sell</span>
+                                    <span class="space"></span>
+                                    <small>Order</small>
+                                </at-button>
+                            </div>
+                            <div class="col flex">
+                                <at-button type="error" hollow>
                                     <span v-html="betterNumber(botTrade.loss.value)"></span>
                                     <span class="space"></span>
                                     <small>{{ quoteSymbol }}</small>
@@ -326,7 +393,7 @@
                                 </at-button>
                             </div>
                             <div class="col flex">
-                                <at-button type="success" hollow>
+                                <at-button type="info" hollow>
                                     <small>Remaining</small>
                                     <span class="space"></span>
                                     <span v-html="betterNumber(botTrade.profit.value - botTrade.loss.value)"></span>
@@ -501,10 +568,14 @@ export default {
             },
             keepCandles: {},
             bot: {
-                fund: this.$store.getters['botFund'],
-                profit: this.$store.getters['botProfit'],
-                stoploss: this.$store.getters['botStoploss'],
-                timefream: this.$store.getters['botTimefream'],
+                fund: 0,
+                profit: 0,
+                stoploss: 0,
+                timefream: 0,
+                chain: {
+                    upToDown: 0,
+                    downToUp: 0
+                },
                 limit: 120,
                 status: 'stop',
                 pointer: 0,
@@ -519,6 +590,7 @@ export default {
                     rate: 0,
                     amount: 0,
                     key: null,
+                    check: [],
                     log: []
                 },
                 trade: {
@@ -528,11 +600,20 @@ export default {
             }
         }
     },
+    created() {
+        this.bot.fund = this.$store.getters['botFund']
+        this.bot.profit = this.$store.getters['botProfit']
+        this.bot.stoploss = this.$store.getters['botStoploss']
+        this.bot.timefream = this.$store.getters['botTimefream']
+        this.bot.chain = this.$store.getters['botChain']
+    },
     watch: {
         currentCandel(newValue, oldValue) {
-            if (oldValue && newValue) {
-                if (newValue.key !== oldValue.key) {
-                    this.flow(this.botUnderTesting ? newValue : oldValue)
+            if (this.botUnderTesting || this.botUnderTrading) {
+                if (oldValue && newValue) {
+                    if (newValue.key !== oldValue.key) {
+                        this.flow(this.botUnderTesting ? newValue : oldValue)
+                    }
                 }
             }
         }
@@ -553,7 +634,7 @@ export default {
                     .valueOf()
             ].join('')
         },
-        streamName1() {
+        streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_', this.bot.timefream].join('')
         },
         candles() {
@@ -563,7 +644,7 @@ export default {
                 current.key = key
                 current.chain = {
                     state: false,
-                    status: current.close > current.open,
+                    status: current.status,
                     body: [current.body],
                     shadow: [current.shadow],
                     from: current.open,
@@ -572,9 +653,15 @@ export default {
                     length: 1
                 }
                 let chainCheck = true
+                let needNormalize = current.body < current.shadow * 0.5
                 let moveAvg = _.map(_.range(10), prevIndex => {
                     let prevKey = _.get(timefream, index + prevIndex + 1, key)
-                    let { open, close, body, shadow, volume } = this.keepCandles[prevKey]
+                    let { open, close, body, shadow, volume, status, from } = this.keepCandles[prevKey]
+                    // normalize large shadow to prev status
+                    if (needNormalize && body > shadow * 0.5) {
+                        current.chain.status = status
+                        needNormalize = false
+                    }
                     if (chainCheck && key !== prevKey && current.chain.status === close > open) {
                         current.chain.body.push(body)
                         current.chain.shadow.push(shadow)
@@ -623,6 +710,9 @@ export default {
         currentCandelPrice() {
             return _.get(this.currentCandel, 'close', 0)
         },
+        currentCandelCloseAt() {
+            return moment(_.get(this.currentCandel, 'closeAt', moment().valueOf())).diff(moment().valueOf(), 'seconds')
+        },
         botTimefreamValue() {
             return _.replace(this.bot.timefream, /[^0-9]/g, '')
         },
@@ -638,6 +728,9 @@ export default {
         },
         botUnderTesting() {
             return this.bot.status === 'test'
+        },
+        botUnderTrading() {
+            return this.bot.status === 'trade'
         },
         botTrade() {
             let out = {
@@ -753,6 +846,8 @@ export default {
             this.$set(this.keepCandles, [moment(from).format('MMDDHHmmss'), moment(to).format('MMDDHHmmss')].join(''), {
                 from: moment(from).format('MM-DD HH:mm:ss'),
                 to: moment(to).format('MM-DD HH:mm:ss'),
+                closeAt: to,
+                status: close > open,
                 open,
                 high,
                 low,
@@ -874,6 +969,18 @@ export default {
                 this.$store.commit('botStoploss', number)
             }
         },
+        changeBotChainDownToUp(value) {
+            this.$store.commit('botChain', {
+                upToDown: this.bot.chain.upToDown,
+                downToUp: value
+            })
+        },
+        changeBotChainUpToDown(value) {
+            this.$store.commit('botChain', {
+                upToDown: value,
+                downToUp: this.bot.chain.downToUp
+            })
+        },
         changeBotTimefream(value) {
             this.$store.commit('botTimefream', value)
             this.$nextTick(() => {
@@ -883,6 +990,13 @@ export default {
         changeBotStatus(value) {
             if (this.botUnderTesting) {
                 this.botTest()
+            } else if (this.botUnderTrading) {
+                this.$Notify({
+                    title: 'Bot',
+                    type: 'success',
+                    message: 'Start bot trading',
+                    duration: 6000
+                })
             }
         },
         botTest() {
@@ -892,6 +1006,7 @@ export default {
                 rate: 0,
                 amount: 0,
                 key: null,
+                check: [],
                 log: []
             }
             this.bot.trade.buy = []
@@ -921,6 +1036,7 @@ export default {
         flow(current) {
             let prev = _.get(this.keepCandles, current.prevKey, false)
             if (prev) {
+                this.bot.flow.check.push(current.key)
                 if (this.bot.flow.order) {
                     if (this.bot.flow.rate >= current.low && this.bot.flow.rate <= current.high) {
                         this.bot.flow.order = false
@@ -969,7 +1085,7 @@ export default {
                 if (this.bot.flow.side === 'sell' && !current.chain.status) {
                     if (
                         prev.chain.status &&
-                        prev.chain.length > 2 &&
+                        prev.chain.length >= this.bot.chain.downToUp &&
                         current.close * this.bot.flow.amount >
                             this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
                     ) {
@@ -1001,14 +1117,14 @@ export default {
                 } else if (
                     this.bot.flow.side === 'buy' &&
                     current.chain.status &&
-                    current.chain.body > current.chain.shadow &&
+                    current.chain.body > current.chain.shadow * 0.5 &&
                     current.high < current.weightMoveAvg &&
                     !prev.chain.status &&
-                    prev.chain.length > 2 &&
+                    prev.chain.length >= this.bot.chain.upToDown &&
                     prev.high < prev.weightMoveAvg
                 ) {
-                    let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.15, 6)
-                    if (rate >= current.open && rate <= current.close) {
+                    let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.1, 6)
+                    if (rate >= current.low && rate <= current.high) {
                         this.bot.flow.rate = rate
                         this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
                         this.bot.flow.key = current.key
@@ -1086,17 +1202,28 @@ export default {
 
                 .item {
                     position: relative;
+                    display: flex;
                     width: 100px;
                     top: -1px;
                     padding: 0 8px;
                     box-sizing: border-box;
                     font-size: 10px;
+                    flex-direction: column;
 
-                    > span {
+                    .price,
+                    .close-at {
                         background: #ffc82c;
-                        padding: 1px 4px 2px;
                         color: #0b0e11;
                         border-radius: 4px;
+                    }
+
+                    .price {
+                        padding: 2px 4px 0px 4px;
+                        border-radius: 4px 4px 0 0;
+                    }
+                    .close-at {
+                        padding: 0px 4px 2px 4px;
+                        border-radius: 0 0 4px 4px;
                     }
                 }
             }
@@ -1107,6 +1234,19 @@ export default {
             width: 7px;
             height: 200px;
             border-radius: 4px;
+            cursor: pointer;
+
+            &.pointer,
+            &:hover {
+                background: linear-gradient(
+                    0deg,
+                    rgba(240, 185, 11, 0.6),
+                    rgba(240, 185, 11, 0.2),
+                    rgba(240, 185, 11, 0.1),
+                    rgba(240, 185, 11, 0.2),
+                    rgba(240, 185, 11, 0.6)
+                );
+            }
 
             .line {
                 position: absolute;
@@ -1123,7 +1263,6 @@ export default {
                 left: 1px;
                 right: 1px;
                 border-radius: 4px;
-                cursor: pointer;
             }
 
             .area {
@@ -1151,15 +1290,37 @@ export default {
                 }
             }
 
-            &.pointer {
-                background: linear-gradient(
-                    0deg,
-                    rgba(240, 185, 11, 0.6),
-                    rgba(240, 185, 11, 0.2),
-                    rgba(240, 185, 11, 0.1),
-                    rgba(240, 185, 11, 0.2),
-                    rgba(240, 185, 11, 0.6)
-                );
+            &.greenToRed,
+            &.redToGreen {
+                &::before {
+                    content: '';
+                    position: absolute;
+                    bottom: -6px;
+                    left: 1px;
+                    right: 1px;
+                    height: 2px;
+                    border-radius: 4px;
+                }
+            }
+
+            &.greenToRed {
+                &::before {
+                    background: #13ce66;
+                }
+
+                .bar {
+                    background: #ff4949;
+                }
+            }
+
+            &.redToGreen {
+                &::before {
+                    background: #ff4949;
+                }
+
+                .bar {
+                    background: #13ce66;
+                }
             }
 
             &.buyTrade,
@@ -1238,7 +1399,6 @@ export default {
         }
 
         .bot-log {
-            background: #f9f9f9;
             margin: 8px 0 0 0;
             border-radius: 4px;
             padding: 4px;
@@ -1248,9 +1408,9 @@ export default {
             .item-box {
                 display: flex;
                 align-items: center;
-                justify-content: space-around;
+                justify-content: space-between;
                 flex: 1;
-                background: #fff;
+                background: #f1f1f1;
                 padding: 10px;
                 border-radius: 4px;
                 margin: 4px;

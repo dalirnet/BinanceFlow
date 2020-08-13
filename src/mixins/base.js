@@ -40,13 +40,13 @@ export default {
         }
     },
     created() {
+        this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', ''))
+        this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', ''))
         if (this.reset) {
             this.reset()
         }
     },
     mounted() {
-        this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', ''))
-        this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', ''))
         this.toggleConnection()
     },
     methods: {
