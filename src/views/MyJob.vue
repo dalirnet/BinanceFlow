@@ -52,8 +52,10 @@
                                         :class="[
                                             candle.chain.status ? 'green' : 'red',
                                             index == bot.pointer ? 'pointer' : null,
-                                            includeKey(botBuyTradeKeys, candle.key) ? 'buy' : null,
-                                            includeKey(botSellTradeKeys, candle.key) ? 'sell' : null
+                                            includeKey(botBuyOrderKeys, candle.key) ? 'buyOrder' : null,
+                                            includeKey(botBuyTradeKeys, candle.key) ? 'buyTrade' : null,
+                                            includeKey(botSellOrderKeys, candle.key) ? 'sellOrder' : null,
+                                            includeKey(botSellTradeKeys, candle.key) ? 'sellTrade' : null
                                         ]"
                                         @click="
                                             $Notify({
@@ -333,6 +335,26 @@
                                 </at-button>
                             </div>
                         </div>
+                        <div class="row bot-log">
+                            <div
+                                class="item-box"
+                                v-for="(log, index) in bot.flow.log"
+                                :key="index"
+                                :class="log.side == 'Buy' ? 'success-color' : 'error-color'"
+                            >
+                                <strong class="item">{{ index + 1 }}</strong>
+                                <span class="space"> - </span>
+                                <span class="item">{{ log.side }}</span>
+                                <span class="space"> - </span>
+                                <span class="item">{{ log.type }}</span>
+                                <span class="space"> - </span>
+                                <span class="item" v-html="betterNumber(log.rate)"></span>
+                                <span class="space"> - </span>
+                                <span class="item">{{ log.amount }}</span>
+                                <span class="space"> - </span>
+                                <span class="item">{{ log.time }}</span>
+                            </div>
+                        </div>
                     </div>
                 </at-card>
             </div>
@@ -496,7 +518,8 @@ export default {
                     side: 'buy',
                     rate: 0,
                     amount: 0,
-                    key: null
+                    key: null,
+                    log: []
                 },
                 trade: {
                     buy: [],
@@ -641,11 +664,17 @@ export default {
             })
             return out
         },
+        botBuyOrderKeys() {
+            return _.map(this.bot.trade.buy, 'key.order')
+        },
         botBuyTradeKeys() {
-            return _.map(this.bot.trade.buy, 'key')
+            return _.map(this.bot.trade.buy, 'key.trade')
+        },
+        botSellOrderKeys() {
+            return _.map(this.bot.trade.sell, 'key.order')
         },
         botSellTradeKeys() {
-            return _.map(this.bot.trade.sell, 'key')
+            return _.map(this.bot.trade.sell, 'key.trade')
         }
     },
     methods: {
@@ -862,7 +891,8 @@ export default {
                 side: 'buy',
                 rate: 0,
                 amount: 0,
-                key: null
+                key: null,
+                log: []
             }
             this.bot.trade.buy = []
             this.bot.trade.sell = []
@@ -896,10 +926,20 @@ export default {
                         this.bot.flow.order = false
                         if (this.bot.flow.side === 'sell') {
                             this.bot.trade.sell.push({
-                                key: this.bot.flow.key,
+                                key: {
+                                    order: this.bot.flow.key,
+                                    trade: current.key
+                                },
                                 rate: this.bot.flow.rate,
                                 amount: this.bot.flow.amount,
                                 total: this.bot.flow.rate * this.bot.flow.amount
+                            })
+                            this.bot.flow.log.push({
+                                side: 'Sell',
+                                type: 'Trade',
+                                rate: this.bot.flow.rate,
+                                amount: this.bot.flow.amount,
+                                time: current.from
                             })
                             this.bot.flow.side = 'buy'
                             this.bot.flow.rate = 0
@@ -907,52 +947,79 @@ export default {
                             this.bot.flow.key = null
                         } else {
                             this.bot.trade.buy.push({
-                                key: this.bot.flow.key,
+                                key: {
+                                    order: this.bot.flow.key,
+                                    trade: current.key
+                                },
                                 rate: this.bot.flow.rate,
                                 amount: this.bot.flow.amount,
                                 total: this.bot.flow.rate * this.bot.flow.amount
                             })
+                            this.bot.flow.log.push({
+                                side: 'Buy',
+                                type: 'Trade',
+                                rate: this.bot.flow.rate,
+                                amount: this.bot.flow.amount,
+                                time: current.from
+                            })
                             this.bot.flow.side = 'sell'
                         }
                     }
-                } else {
-                    if (this.bot.flow.side === 'sell' && !current.chain.status) {
-                        if (current.from == '08-13 01:59:00') {
-                            console.log('this', current)
-                        }
-                        if (
-                            prev.chain.status &&
-                            prev.chain.length > 2 &&
-                            current.close * this.bot.flow.amount >
-                                this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
-                        ) {
-                            this.bot.flow.rate = current.close
-                            this.bot.flow.key = current.key
-                            this.bot.flow.order = true
-                        } else if (
-                            current.close * this.bot.flow.amount <
-                            this.bot.flow.rate * this.bot.flow.amount - this.bot.stoploss
-                        ) {
-                            this.bot.flow.rate = current.close
-                            this.bot.flow.key = current.key
-                            this.bot.flow.order = true
-                        }
-                    } else if (
-                        this.bot.flow.side === 'buy' &&
-                        current.chain.status &&
-                        current.chain.body > current.chain.shadow &&
-                        current.high < current.weightMoveAvg &&
-                        !prev.chain.status &&
+                }
+                if (this.bot.flow.side === 'sell' && !current.chain.status) {
+                    if (
+                        prev.chain.status &&
                         prev.chain.length > 2 &&
-                        prev.high < prev.weightMoveAvg
+                        current.close * this.bot.flow.amount >
+                            this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
                     ) {
-                        let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.15, 6)
-                        if (rate >= current.open && rate <= current.close) {
-                            this.bot.flow.rate = rate
-                            this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
-                            this.bot.flow.key = current.key
-                            this.bot.flow.order = true
-                        }
+                        this.bot.flow.rate = current.close
+                        this.bot.flow.key = current.key
+                        this.bot.flow.order = true
+                        this.bot.flow.log.push({
+                            side: 'Sell',
+                            type: 'Order',
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            time: current.from
+                        })
+                    } else if (
+                        current.close * this.bot.flow.amount <
+                        this.bot.flow.rate * this.bot.flow.amount - this.bot.stoploss
+                    ) {
+                        this.bot.flow.rate = current.close
+                        this.bot.flow.key = current.key
+                        this.bot.flow.order = true
+                        this.bot.flow.log.push({
+                            side: 'Sell',
+                            type: 'Order',
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            time: current.from
+                        })
+                    }
+                } else if (
+                    this.bot.flow.side === 'buy' &&
+                    current.chain.status &&
+                    current.chain.body > current.chain.shadow &&
+                    current.high < current.weightMoveAvg &&
+                    !prev.chain.status &&
+                    prev.chain.length > 2 &&
+                    prev.high < prev.weightMoveAvg
+                ) {
+                    let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.15, 6)
+                    if (rate >= current.open && rate <= current.close) {
+                        this.bot.flow.rate = rate
+                        this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
+                        this.bot.flow.key = current.key
+                        this.bot.flow.order = true
+                        this.bot.flow.log.push({
+                            side: 'Buy',
+                            type: 'Order',
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            time: current.from
+                        })
                     }
                 }
             }
@@ -1095,7 +1162,19 @@ export default {
                 );
             }
 
-            &.buy {
+            &.buyTrade,
+            &.sellTrade {
+                background: linear-gradient(
+                    0deg,
+                    rgba(120, 164, 250, 0.4),
+                    rgba(120, 164, 250, 0.2),
+                    rgba(120, 164, 250, 0.1),
+                    rgba(120, 164, 250, 0.2),
+                    rgba(120, 164, 250, 0.4)
+                ) !important;
+            }
+
+            &.buyOrder {
                 background: linear-gradient(
                     0deg,
                     rgba(19, 206, 102, 0.4),
@@ -1106,7 +1185,7 @@ export default {
                 ) !important;
             }
 
-            &.sell {
+            &.sellOrder {
                 background: linear-gradient(
                     0deg,
                     rgba(255, 73, 73, 0.4),
@@ -1156,6 +1235,32 @@ export default {
         .at-select.disabled {
             opacity: 0.8;
             pointer-events: none;
+        }
+
+        .bot-log {
+            background: #f9f9f9;
+            margin: 8px 0 0 0;
+            border-radius: 4px;
+            padding: 4px;
+            box-sizing: border-box;
+            border: 1px solid #ececec;
+
+            .item-box {
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
+                flex: 1;
+                background: #fff;
+                padding: 10px;
+                border-radius: 4px;
+                margin: 4px;
+                font-size: 12px;
+                white-space: nowrap;
+
+                .space {
+                    margin: 0 10px;
+                }
+            }
         }
     }
 
