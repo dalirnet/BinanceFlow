@@ -634,56 +634,75 @@ export default {
                     .valueOf()
             ].join('')
         },
-        streamName() {
+        streamName1() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_', this.bot.timefream].join('')
         },
         candles() {
+            // convert large shadow to prev status
             let timefream = _.take(_.reverse(_.keys(this.keepCandles)), this.bot.limit)
-            return _.map(timefream, (key, index) => {
-                let current = this.keepCandles[key]
-                current.key = key
-                current.chain = {
-                    state: false,
-                    status: current.status,
-                    body: [current.body],
-                    shadow: [current.shadow],
-                    from: current.open,
-                    to: current.close,
-                    volume: current.volume,
-                    length: 1
+            return _.map(
+                _.map(timefream, (key, index) => {
+                    let current = this.keepCandles[key]
+                    current.key = key
+                    current.prev = []
+                    current.chain = {
+                        state: false,
+                        status: current.status,
+                        body: [current.body],
+                        shadow: [current.shadow],
+                        from: current.open,
+                        to: current.close,
+                        volume: current.volume,
+                        length: 1
+                    }
+                    current.weightMoveAvg = current.close
+                    let needNormalize = current.body < current.shadow * 0.75
+                    let moveAvg = _.filter(
+                        _.map(_.range(15), prevIndex => {
+                            let key = _.get(timefream, index + prevIndex + 1)
+                            let prevCandle = _.get(this.keepCandles, key, false)
+                            if (prevCandle) {
+                                if (needNormalize && prevCandle.body > prevCandle.shadow * 0.75) {
+                                    current.chain.status = prevCandle.status
+                                    needNormalize = false
+                                }
+                                current.prev.push(key)
+                                return { open: prevCandle.open, close: prevCandle.close, volume: prevCandle.volume }
+                            }
+                            return false
+                        })
+                    )
+                    if (moveAvg.length) {
+                        let sumWeightMoveAvgVolume = _.sum(_.map(moveAvg, 'volume'))
+                        current.weightMoveAvg = _.floor(
+                            _.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumWeightMoveAvgVolume)),
+                            6
+                        )
+                        current.chain.state = current.close > current.weightMoveAvg
+                    }
+                    return current
+                }),
+                candle => {
+                    let chainCheck = true
+                    _.forEach(candle.prev, prevKey => {
+                        if (chainCheck) {
+                            let prevCandle = this.keepCandles[prevKey]
+                            if (candle.chain.status === prevCandle.chain.status) {
+                                candle.chain.body.push(prevCandle.body)
+                                candle.chain.shadow.push(prevCandle.shadow)
+                                candle.chain.volume = _.floor(candle.chain.volume + prevCandle.volume, 6)
+                                candle.chain.from = prevCandle.open
+                                candle.chain.length++
+                            } else {
+                                chainCheck = false
+                            }
+                        }
+                    })
+                    candle.chain.body = _.floor(_.sum(candle.chain.body) / candle.chain.length, 6)
+                    candle.chain.shadow = _.floor(_.sum(candle.chain.shadow) / candle.chain.length, 6)
+                    return candle
                 }
-                let chainCheck = true
-                let needNormalize = current.body < current.shadow * 0.5
-                let moveAvg = _.map(_.range(10), prevIndex => {
-                    let prevKey = _.get(timefream, index + prevIndex + 1, key)
-                    let { open, close, body, shadow, volume, status, from } = this.keepCandles[prevKey]
-                    // normalize large shadow to prev status
-                    if (needNormalize && body > shadow * 0.5) {
-                        current.chain.status = status
-                        needNormalize = false
-                    }
-                    if (chainCheck && key !== prevKey && current.chain.status === close > open) {
-                        current.chain.body.push(body)
-                        current.chain.shadow.push(shadow)
-                        current.chain.volume = _.floor(current.chain.volume + volume, 6)
-                        current.chain.from = open
-                        current.chain.length++
-                    } else {
-                        chainCheck = false
-                    }
-                    return { open, close, volume }
-                })
-                current.chain.body = _.floor(_.sum(current.chain.body) / current.chain.length, 6)
-                current.chain.shadow = _.floor(_.sum(current.chain.shadow) / current.chain.length, 6)
-                let sumWeightMoveAvgVolume = _.sum(_.map(moveAvg, 'volume'))
-                current.weightMoveAvg = _.floor(
-                    _.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumWeightMoveAvgVolume)),
-                    6
-                )
-                current.chain.state = current.close > current.weightMoveAvg
-
-                return current
-            })
+            )
         },
         maxOfCandles() {
             return _.max(_.map(this.candles, 'high'))
@@ -1123,7 +1142,7 @@ export default {
                     prev.chain.length >= this.bot.chain.upToDown &&
                     prev.high < prev.weightMoveAvg
                 ) {
-                    let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.1, 6)
+                    let rate = _.floor(current.open + (prev.open - prev.close) * 0.5, 6)
                     if (rate >= current.low && rate <= current.high) {
                         this.bot.flow.rate = rate
                         this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
