@@ -73,7 +73,10 @@
                                                     'High : ' + candle.high,
                                                     'Open : ' + candle.open,
                                                     'Close : ' + candle.close,
-                                                    'Low : ' + candle.low
+                                                    'Low : ' + candle.low,
+                                                    'Volume : ' + candle.volume,
+                                                    'Body : ' + candle.body,
+                                                    'Shadow : ' + candle.shadow
                                                 ].join('\n'),
                                                 duration: 20000
                                             })
@@ -611,8 +614,10 @@ export default {
         currentCandel(newValue, oldValue) {
             if (this.botUnderTesting || this.botUnderTrading) {
                 if (oldValue && newValue) {
+                    let current = this.botUnderTesting ? newValue : oldValue
+                    this.flowTrade(current)
                     if (newValue.key !== oldValue.key) {
-                        this.flow(this.botUnderTesting ? newValue : oldValue)
+                        this.flowOrder(current)
                     }
                 }
             }
@@ -634,7 +639,7 @@ export default {
                     .valueOf()
             ].join('')
         },
-        streamName1() {
+        streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_', this.bot.timefream].join('')
         },
         candles() {
@@ -656,16 +661,26 @@ export default {
                         length: 1
                     }
                     current.weightMoveAvg = current.close
-                    let needNormalize = current.body < current.shadow * 0.75
+                    let needNormalize = current.body < current.shadow * 0.9
                     let moveAvg = _.filter(
-                        _.map(_.range(15), prevIndex => {
+                        _.map(_.range(6), prevIndex => {
                             let key = _.get(timefream, index + prevIndex + 1)
                             let prevCandle = _.get(this.keepCandles, key, false)
                             if (prevCandle) {
-                                if (needNormalize && prevCandle.body > prevCandle.shadow * 0.75) {
+                                if (
+                                    prevIndex == 0 &&
+                                    current.volume < prevCandle.volume &&
+                                    current.high < prevCandle.high
+                                ) {
                                     current.chain.status = prevCandle.status
-                                    needNormalize = false
                                 }
+                                if (needNormalize) {
+                                    if (prevCandle.body > prevCandle.shadow * 0.9) {
+                                        current.chain.status = prevCandle.status
+                                        needNormalize = false
+                                    }
+                                }
+
                                 current.prev.push(key)
                                 return { open: prevCandle.open, close: prevCandle.close, volume: prevCandle.volume }
                             }
@@ -860,7 +875,7 @@ export default {
             low = _.floor(_.toNumber(low), 6)
             close = _.floor(_.toNumber(close), 6)
             volume = _.floor(_.toNumber(volume), 6)
-            body = _.floor(((_.max([open, close]) - _.min([open, close])) * 100) / (high - low), 2)
+            body = _.floor(((_.max([open, close]) - _.min([open, close])) * 100) / (high - low), 2) || 100
             shadow = 100 - body
             this.$set(this.keepCandles, [moment(from).format('MMDDHHmmss'), moment(to).format('MMDDHHmmss')].join(''), {
                 from: moment(from).format('MM-DD HH:mm:ss'),
@@ -954,6 +969,7 @@ export default {
                 }
             })
         },
+        newOrder(rate, amount) {},
         cancelOrder(id) {
             if (!this.myOpenOrder[id].loading) {
                 this.myOpenOrder[id].loading = true
@@ -971,12 +987,17 @@ export default {
             let number = _.toNumber(this.bot.keep.fund)
             if (number > 0) {
                 this.bot.fund = number
+                this.bot.keep.profit = _.floor(this.bot.profit - number * 0.0015, 2)
+                this.bot.keep.stoploss = _.floor(this.bot.stoploss + number * 0.0015, 2)
                 this.$store.commit('botFund', number)
+                this.setBotProfit()
+                this.setBotStoploss()
             }
         },
         setBotProfit() {
             let number = _.toNumber(this.bot.keep.profit)
             if (number > 0) {
+                number = _.floor(number + this.bot.fund * 0.0015, 2)
                 this.bot.profit = number
                 this.$store.commit('botProfit', number)
             }
@@ -984,6 +1005,7 @@ export default {
         setBotStoploss() {
             let number = _.toNumber(this.bot.keep.stoploss)
             if (number > 0) {
+                number = _.floor(number - this.bot.fund * 0.0015, 2)
                 this.bot.stoploss = number
                 this.$store.commit('botStoploss', number)
             }
@@ -1008,8 +1030,10 @@ export default {
         },
         changeBotStatus(value) {
             if (this.botUnderTesting) {
+                this.flowReset()
                 this.botTest()
             } else if (this.botUnderTrading) {
+                this.flowReset()
                 this.$Notify({
                     title: 'Bot',
                     type: 'success',
@@ -1018,7 +1042,7 @@ export default {
                 })
             }
         },
-        botTest() {
+        flowReset() {
             this.bot.flow = {
                 order: false,
                 side: 'buy',
@@ -1030,6 +1054,8 @@ export default {
             }
             this.bot.trade.buy = []
             this.bot.trade.sell = []
+        },
+        botTest() {
             let count = this.candles.length - 1
             this.$nextTick(async () => {
                 for (let i = 0; i <= count; i++) {
@@ -1052,55 +1078,61 @@ export default {
                 })
             })
         },
-        flow(current) {
+        flowTrade(current) {
+            let prev = _.get(this.keepCandles, current.prevKey, false)
+            if (prev && this.bot.flow.order) {
+                if (this.bot.flow.side === 'sell') {
+                    if (current.high >= this.bot.flow.rate) {
+                        this.bot.flow.order = false
+                        this.bot.trade.sell.push({
+                            key: {
+                                order: this.bot.flow.key,
+                                trade: current.key
+                            },
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            total: this.bot.flow.rate * this.bot.flow.amount
+                        })
+                        this.bot.flow.log.push({
+                            side: 'Sell',
+                            type: 'Trade',
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            time: current.from
+                        })
+                        this.bot.flow.side = 'buy'
+                        this.bot.flow.rate = 0
+                        this.bot.flow.amount = 0
+                        this.bot.flow.key = null
+                    }
+                } else {
+                    if (current.low <= this.bot.flow.rate) {
+                        this.bot.flow.order = false
+                        this.bot.trade.buy.push({
+                            key: {
+                                order: this.bot.flow.key,
+                                trade: current.key
+                            },
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            total: this.bot.flow.rate * this.bot.flow.amount
+                        })
+                        this.bot.flow.log.push({
+                            side: 'Buy',
+                            type: 'Trade',
+                            rate: this.bot.flow.rate,
+                            amount: this.bot.flow.amount,
+                            time: current.from
+                        })
+                        this.bot.flow.side = 'sell'
+                    }
+                }
+            }
+        },
+        flowOrder(current) {
             let prev = _.get(this.keepCandles, current.prevKey, false)
             if (prev) {
                 this.bot.flow.check.push(current.key)
-                if (this.bot.flow.order) {
-                    if (this.bot.flow.rate >= current.low && this.bot.flow.rate <= current.high) {
-                        this.bot.flow.order = false
-                        if (this.bot.flow.side === 'sell') {
-                            this.bot.trade.sell.push({
-                                key: {
-                                    order: this.bot.flow.key,
-                                    trade: current.key
-                                },
-                                rate: this.bot.flow.rate,
-                                amount: this.bot.flow.amount,
-                                total: this.bot.flow.rate * this.bot.flow.amount
-                            })
-                            this.bot.flow.log.push({
-                                side: 'Sell',
-                                type: 'Trade',
-                                rate: this.bot.flow.rate,
-                                amount: this.bot.flow.amount,
-                                time: current.from
-                            })
-                            this.bot.flow.side = 'buy'
-                            this.bot.flow.rate = 0
-                            this.bot.flow.amount = 0
-                            this.bot.flow.key = null
-                        } else {
-                            this.bot.trade.buy.push({
-                                key: {
-                                    order: this.bot.flow.key,
-                                    trade: current.key
-                                },
-                                rate: this.bot.flow.rate,
-                                amount: this.bot.flow.amount,
-                                total: this.bot.flow.rate * this.bot.flow.amount
-                            })
-                            this.bot.flow.log.push({
-                                side: 'Buy',
-                                type: 'Trade',
-                                rate: this.bot.flow.rate,
-                                amount: this.bot.flow.amount,
-                                time: current.from
-                            })
-                            this.bot.flow.side = 'sell'
-                        }
-                    }
-                }
                 if (this.bot.flow.side === 'sell' && !current.chain.status) {
                     if (
                         prev.chain.status &&
@@ -1136,13 +1168,13 @@ export default {
                 } else if (
                     this.bot.flow.side === 'buy' &&
                     current.chain.status &&
-                    current.chain.body > current.chain.shadow * 0.5 &&
-                    current.high < current.weightMoveAvg &&
+                    current.high * 0.9 < current.weightMoveAvg &&
                     !prev.chain.status &&
                     prev.chain.length >= this.bot.chain.upToDown &&
-                    prev.high < prev.weightMoveAvg
+                    prev.high < prev.weightMoveAvg &&
+                    current.open < prev.close
                 ) {
-                    let rate = _.floor(current.open + (prev.open - prev.close) * 0.5, 6)
+                    let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.1, 6)
                     if (rate >= current.low && rate <= current.high) {
                         this.bot.flow.rate = rate
                         this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
@@ -1273,6 +1305,7 @@ export default {
                 bottom: 0;
                 left: 3px;
                 right: 3px;
+                min-height: 1px;
             }
 
             .bar {
@@ -1282,6 +1315,7 @@ export default {
                 left: 1px;
                 right: 1px;
                 border-radius: 4px;
+                min-height: 1px;
             }
 
             .area {
@@ -1327,6 +1361,7 @@ export default {
                     background: #13ce66;
                 }
 
+                .line,
                 .bar {
                     background: #ff4949;
                 }
@@ -1337,6 +1372,7 @@ export default {
                     background: #ff4949;
                 }
 
+                .line,
                 .bar {
                     background: #13ce66;
                 }
