@@ -594,6 +594,8 @@ export default {
     components: { ConnectionCardHeaderTitle, ConnectionCardHeaderExtra },
     data() {
         return {
+            now: moment().valueOf(),
+            timer: null,
             myCoin: {
                 base: {
                     free: 0,
@@ -656,6 +658,9 @@ export default {
         this.bot.chain = this.$store.getters['botChain']
         this.bot.vwap = this.$store.getters['botVwap']
         this.bot.timefream = this.$store.getters['botTimefream']
+        this.timer = setInterval(() => {
+            this.now = moment().valueOf()
+        }, 1000)
     },
     watch: {
         currentCandel(newValue, oldValue) {
@@ -792,7 +797,7 @@ export default {
             return _.get(this.currentCandel, 'close', 0)
         },
         currentCandelCloseAt() {
-            return moment(_.get(this.currentCandel, 'closeAt', moment().valueOf())).diff(moment().valueOf(), 'seconds')
+            return moment(_.get(this.currentCandel, 'closeAt', this.now)).diff(this.now, 'seconds')
         },
         botTimefreamValue() {
             return _.replace(this.bot.timefream, /[^0-9]/g, '')
@@ -1266,6 +1271,9 @@ export default {
                 })
             }
         }
+    },
+    beforeDestroy() {
+        clearInterval(this.timer)
     }
 }
 </script>
