@@ -339,70 +339,84 @@
                         </div>
                         <div class="row">
                             <div class="col flex">
-                                <at-button type="info" hollow>
-                                    <span>Check</span>
-                                    <span class="space"></span>
-                                    <span>{{ bot.flow.check.length }}</span>
-                                    <span class="space"></span>
-                                    <small>Candles</small>
-                                </at-button>
+                                <div class="row">
+                                    <div class="col flex">
+                                        <at-button type="info" hollow>
+                                            <span>Check</span>
+                                            <span class="space"></span>
+                                            <span>{{ bot.flow.check.length }}</span>
+                                            <span class="space"></span>
+                                            <small>Candles</small>
+                                        </at-button>
+                                    </div>
+                                    <div class="col flex">
+                                        <at-button type="success" hollow>
+                                            <span>{{ bot.trade.buy.length }}</span>
+                                            <span class="space"></span>
+                                            <span>Buy</span>
+                                            <span class="space"></span>
+                                            <small>Order</small>
+                                        </at-button>
+                                    </div>
+                                    <div class="col flex">
+                                        <at-button type="success" hollow>
+                                            <span v-html="betterNumber(botTrade.profit.value)"></span>
+                                            <span class="space"></span>
+                                            <small>{{ quoteSymbol }}</small>
+                                            <span class="space"></span>
+                                            <span>Profit</span>
+                                            <span class="space"></span>
+                                            <small>in</small>
+                                            <span class="space"></span>
+                                            <span>{{ botTrade.profit.count }}</span>
+                                            <span class="space"></span>
+                                            <small>Trade</small>
+                                        </at-button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col flex">
-                                <at-button type="success" hollow>
-                                    <span>{{ bot.trade.buy.length }}</span>
-                                    <span class="space"></span>
-                                    <span>Buy</span>
-                                    <span class="space"></span>
-                                    <small>Order</small>
-                                </at-button>
-                            </div>
-                            <div class="col flex">
-                                <at-button type="success" hollow>
-                                    <span v-html="betterNumber(botTrade.profit.value)"></span>
-                                    <span class="space"></span>
-                                    <small>{{ quoteSymbol }}</small>
-                                    <span class="space"></span>
-                                    <span>Profit</span>
-                                    <span class="space"></span>
-                                    <small>in</small>
-                                    <span class="space"></span>
-                                    <span>{{ botTrade.profit.count }}</span>
-                                    <span class="space"></span>
-                                    <small>Trade</small>
-                                </at-button>
-                            </div>
-                            <div class="col flex">
-                                <at-button type="error" hollow>
-                                    <span>{{ bot.trade.sell.length }}</span>
-                                    <span class="space"></span>
-                                    <span>Sell</span>
-                                    <span class="space"></span>
-                                    <small>Order</small>
-                                </at-button>
-                            </div>
-                            <div class="col flex">
-                                <at-button type="error" hollow>
-                                    <span v-html="betterNumber(botTrade.loss.value)"></span>
-                                    <span class="space"></span>
-                                    <small>{{ quoteSymbol }}</small>
-                                    <span class="space"></span>
-                                    <span>Loss</span>
-                                    <span class="space"></span>
-                                    <small>in</small>
-                                    <span class="space"></span>
-                                    <span>{{ botTrade.loss.count }}</span>
-                                    <span class="space"></span>
-                                    <small>Trade</small>
-                                </at-button>
-                            </div>
-                            <div class="col flex">
-                                <at-button type="info" hollow>
-                                    <small>Remaining</small>
-                                    <span class="space"></span>
-                                    <span v-html="betterNumber(botTrade.profit.value - botTrade.loss.value)"></span>
-                                    <span class="space"></span>
-                                    <small>{{ quoteSymbol }}</small>
-                                </at-button>
+                                <div class="row">
+                                    <div class="col flex">
+                                        <at-button type="error" hollow>
+                                            <span>{{ bot.trade.sell.length }}</span>
+                                            <span class="space"></span>
+                                            <span>Sell</span>
+                                            <span class="space"></span>
+                                            <small>Order</small>
+                                        </at-button>
+                                    </div>
+                                    <div class="col flex">
+                                        <at-button type="error" hollow>
+                                            <span v-html="betterNumber(botTrade.loss.value)"></span>
+                                            <span class="space"></span>
+                                            <small>{{ quoteSymbol }}</small>
+                                            <span class="space"></span>
+                                            <span>Loss</span>
+                                            <span class="space"></span>
+                                            <small>in</small>
+                                            <span class="space"></span>
+                                            <span>{{ botTrade.loss.count }}</span>
+                                            <span class="space"></span>
+                                            <small>Trade</small>
+                                        </at-button>
+                                    </div>
+                                    <div class="col flex">
+                                        <at-button type="info" hollow>
+                                            <small>Remaining</small>
+                                            <span class="space"></span>
+                                            <span
+                                                v-html="
+                                                    betterNumber(
+                                                        botTrade.profit.value - botTrade.loss.value - botTrade.trade.fee
+                                                    )
+                                                "
+                                            ></span>
+                                            <span class="space"></span>
+                                            <small>{{ quoteSymbol }}</small>
+                                        </at-button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="row bot-log">
@@ -412,8 +426,6 @@
                                 :key="index"
                                 :class="log.side == 'Buy' ? 'success-color' : 'error-color'"
                             >
-                                <strong class="item">{{ index + 1 }}</strong>
-                                <span class="space"> - </span>
                                 <span class="item">{{ log.side }}</span>
                                 <span class="space"> - </span>
                                 <span class="item">{{ log.type }}</span>
@@ -768,6 +780,10 @@ export default {
         },
         botTrade() {
             let out = {
+                trade: {
+                    value: 0,
+                    fee: 0
+                },
                 profit: {
                     count: 0,
                     value: 0
@@ -780,6 +796,7 @@ export default {
             _.forEach(this.bot.trade.buy, (buy, index) => {
                 let sell = _.get(this.bot.trade.sell, index, false)
                 if (sell) {
+                    out.trade.value += sell.total + buy.total
                     if (sell.total > buy.total) {
                         out.profit.count++
                         out.profit.value += sell.total - buy.total
@@ -789,6 +806,7 @@ export default {
                     }
                 }
             })
+            out.trade.fee = out.trade.value * 0.00075
             return out
         },
         botBuyOrderKeys() {
@@ -1434,6 +1452,10 @@ export default {
     }
 
     .bot-box {
+        .row {
+            flex: 1;
+        }
+
         .at-input--disabled {
             .at-input-group__prepend,
             .at-input__icon,
@@ -1471,6 +1493,14 @@ export default {
                 margin: 4px;
                 font-size: 12px;
                 white-space: nowrap;
+
+                &.success-color {
+                    margin-right: calc(50% + 4px);
+                }
+
+                &.error-color {
+                    margin-left: calc(50% + 4px);
+                }
 
                 .space {
                     margin: 0 10px;
