@@ -16,6 +16,10 @@
                                     <at-option value="XRP">Ripple</at-option>
                                     <at-option value="ADA">Cardano</at-option>
                                     <at-option value="LTC">Litecoin</at-option>
+                                    <at-option value="VET">VeChain</at-option>
+                                    <at-option value="BAND">Band</at-option>
+                                    <at-option value="ATOM">Cosmos</at-option>
+                                    <at-option value="LINK">ChainLink</at-option>
                                     <at-option value="BNB">BinanceCoin</at-option>
                                 </at-select>
                             </div>
