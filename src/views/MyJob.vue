@@ -190,7 +190,7 @@
                     <div>
                         <div class="row at-row">
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('fund')">
                                     <at-input :value="bot.fund + ' ' + quoteSymbol" icon="inbox" disabled>
                                         <template slot="prepend">
                                             <span>Fund</span>
@@ -199,6 +199,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-input
+                                        ref="fund"
                                         v-model="bot.keep.fund"
                                         :placeholder="`Fund as ${quoteSymbol}`"
                                         :class="{ disabled: !connected }"
@@ -208,7 +209,7 @@
                                 </div>
                             </div>
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('profit')">
                                     <at-input :value="bot.profit + ' ' + quoteSymbol" icon="trending-up" disabled>
                                         <template slot="prepend">
                                             <span>Profit</span>
@@ -217,6 +218,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-input
+                                        ref="profit"
                                         v-model="bot.keep.profit"
                                         :placeholder="`Min profit as ${quoteSymbol}`"
                                         :class="{ disabled: !connected }"
@@ -226,7 +228,7 @@
                                 </div>
                             </div>
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('stoploss')">
                                     <at-input :value="bot.stoploss + ' ' + quoteSymbol" icon="trending-down" disabled>
                                         <template slot="prepend">
                                             <span>Stoploss</span>
@@ -235,6 +237,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-input
+                                        ref="stoploss"
                                         v-model="bot.keep.stoploss"
                                         :placeholder="`Max stoploss as ${quoteSymbol}`"
                                         :class="{ disabled: !connected }"
@@ -244,7 +247,7 @@
                                 </div>
                             </div>
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('chainDownToUp')">
                                     <at-input :value="bot.chain.downToUp" icon="trending-up" disabled>
                                         <template slot="prepend">
                                             <span>Chain to up</span>
@@ -253,6 +256,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-select
+                                        ref="chainDownToUp"
                                         v-model="bot.chain.downToUp"
                                         :class="{ disabled: !connected }"
                                         @on-change="changeBotChainDownToUp"
@@ -267,7 +271,7 @@
                                 </div>
                             </div>
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('chainUpToDown')">
                                     <at-input :value="bot.chain.upToDown" icon="trending-down" disabled>
                                         <template slot="prepend">
                                             <span>Chain to down</span>
@@ -276,6 +280,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-select
+                                        ref="chainUpToDown"
                                         v-model="bot.chain.upToDown"
                                         :class="{ disabled: !connected }"
                                         @on-change="changeBotChainUpToDown"
@@ -292,7 +297,30 @@
                         </div>
                         <div class="row at-row">
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('vwap')">
+                                    <at-input :value="bot.vwap" icon="layers" disabled>
+                                        <template slot="prepend">
+                                            <span>Vwap</span>
+                                        </template>
+                                    </at-input>
+                                </div>
+                                <div class="col-24">
+                                    <at-select
+                                        ref="vwap"
+                                        v-model="bot.vwap"
+                                        :class="{ disabled: !connected }"
+                                        @on-change="changeBotVwap"
+                                    >
+                                        <at-option :value="5">5 Timefream</at-option>
+                                        <at-option :value="10">10 Timefream</at-option>
+                                        <at-option :value="15">15 Timefream</at-option>
+                                        <at-option :value="20">20 Timefream</at-option>
+                                        <at-option :value="25">25 Timefream</at-option>
+                                    </at-select>
+                                </div>
+                            </div>
+                            <div class="row col">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('timefream')">
                                     <at-input :value="bot.timefream" icon="clock" disabled>
                                         <template slot="prepend">
                                             <span>Timefream</span>
@@ -301,6 +329,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-select
+                                        ref="timefream"
                                         v-model="bot.timefream"
                                         :class="{ disabled: !connected }"
                                         @on-change="changeBotTimefream"
@@ -317,7 +346,7 @@
                                 </div>
                             </div>
                             <div class="row col">
-                                <div class="col-24 at-row">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('status')">
                                     <at-input :value="bot.status" icon="activity" disabled>
                                         <template slot="prepend">
                                             <span>Status</span>
@@ -326,6 +355,7 @@
                                 </div>
                                 <div class="col-24">
                                     <at-select
+                                        ref="status"
                                         v-model="bot.status"
                                         :class="{ disabled: !connected }"
                                         @on-change="changeBotStatus"
@@ -432,7 +462,9 @@
                                 <span class="space"> - </span>
                                 <span class="item" v-html="betterNumber(log.rate)"></span>
                                 <span class="space"> - </span>
-                                <span class="item">{{ log.amount }}</span>
+                                <span class="item" v-html="betterNumber(log.amount)"></span>
+                                <span class="space"> - </span>
+                                <span class="item">{{ log.comment }}</span>
                                 <span class="space"> - </span>
                                 <span class="item">{{ log.time }}</span>
                             </div>
@@ -586,22 +618,24 @@ export default {
                 fund: 0,
                 profit: 0,
                 stoploss: 0,
-                timefream: 0,
                 chain: {
                     upToDown: 0,
                     downToUp: 0
                 },
-                limit: 120,
+                vwap: 5,
+                timefream: 0,
                 status: 'stop',
-                pointer: 0,
                 keep: {
                     fund: null,
                     profit: null,
                     stoploss: null
                 },
+                limit: 120,
+                pointer: 0,
                 flow: {
                     order: false,
                     side: 'buy',
+                    id: 0,
                     rate: 0,
                     amount: 0,
                     key: null,
@@ -619,8 +653,9 @@ export default {
         this.bot.fund = this.$store.getters['botFund']
         this.bot.profit = this.$store.getters['botProfit']
         this.bot.stoploss = this.$store.getters['botStoploss']
-        this.bot.timefream = this.$store.getters['botTimefream']
         this.bot.chain = this.$store.getters['botChain']
+        this.bot.vwap = this.$store.getters['botVwap']
+        this.bot.timefream = this.$store.getters['botTimefream']
     },
     watch: {
         currentCandel(newValue, oldValue) {
@@ -675,7 +710,7 @@ export default {
                     current.weightMoveAvg = current.close
                     let needNormalize = current.body < current.shadow * 0.9
                     let moveAvg = _.filter(
-                        _.map(_.range(6), prevIndex => {
+                        _.map(_.range(this.bot.vwap), prevIndex => {
                             let key = _.get(timefream, index + prevIndex + 1)
                             let prevCandle = _.get(this.keepCandles, key, false)
                             if (prevCandle) {
@@ -893,8 +928,8 @@ export default {
             low = _.floor(_.toNumber(low), 6)
             close = _.floor(_.toNumber(close), 6)
             volume = _.floor(_.toNumber(volume), 6)
-            body = _.floor(((_.max([open, close]) - _.min([open, close])) * 100) / (high - low), 2) || 100
-            shadow = 100 - body
+            body = _.floor(((_.max([open, close]) - _.min([open, close])) * 100) / (high - low), 2) || 0
+            shadow = _.floor(100 - body, 2)
             this.$set(this.keepCandles, [moment(from).format('MMDDHHmmss'), moment(to).format('MMDDHHmmss')].join(''), {
                 from: moment(from).format('MM-DD HH:mm:ss'),
                 to: moment(to).format('MM-DD HH:mm:ss'),
@@ -987,7 +1022,18 @@ export default {
                 }
             })
         },
-        newOrder(rate, amount) {},
+        newOrder(side, rate, amount, key, comment) {
+            // cancel last order
+            if (this.bot.flow.order && this.bot.flow.side == side) {
+                console.log('cancelOrder')
+            }
+            this.bot.flow.order = true
+            this.bot.flow.key = key
+            this.bot.flow.rate = rate
+            this.bot.flow.amount = amount
+            // log
+            this.flowLog(side, 'Order', rate, amount, key, comment)
+        },
         cancelOrder(id) {
             if (!this.myOpenOrder[id].loading) {
                 this.myOpenOrder[id].loading = true
@@ -1005,8 +1051,8 @@ export default {
             let number = _.toNumber(this.bot.keep.fund)
             if (number > 0) {
                 this.bot.fund = number
-                this.bot.keep.profit = _.floor(this.bot.profit - number * 0.0015, 2)
-                this.bot.keep.stoploss = _.floor(this.bot.stoploss + number * 0.0015, 2)
+                this.bot.keep.profit = _.floor(number * 0.0025, 2)
+                this.bot.keep.stoploss = _.floor(number * 0.005, 2)
                 this.$store.commit('botFund', number)
                 this.setBotProfit()
                 this.setBotStoploss()
@@ -1040,6 +1086,12 @@ export default {
                 downToUp: this.bot.chain.downToUp
             })
         },
+        changeBotVwap(value) {
+            this.$store.commit('botVwap', value)
+            this.$nextTick(() => {
+                this.toggleConnection(true)
+            })
+        },
         changeBotTimefream(value) {
             this.$store.commit('botTimefream', value)
             this.$nextTick(() => {
@@ -1064,6 +1116,7 @@ export default {
             this.bot.flow = {
                 order: false,
                 side: 'buy',
+                id: null,
                 rate: 0,
                 amount: 0,
                 key: null,
@@ -1101,7 +1154,6 @@ export default {
             if (prev && this.bot.flow.order) {
                 if (this.bot.flow.side === 'sell') {
                     if (current.high >= this.bot.flow.rate) {
-                        this.bot.flow.order = false
                         this.bot.trade.sell.push({
                             key: {
                                 order: this.bot.flow.key,
@@ -1111,13 +1163,9 @@ export default {
                             amount: this.bot.flow.amount,
                             total: this.bot.flow.rate * this.bot.flow.amount
                         })
-                        this.bot.flow.log.push({
-                            side: 'Sell',
-                            type: 'Trade',
-                            rate: this.bot.flow.rate,
-                            amount: this.bot.flow.amount,
-                            time: current.from
-                        })
+                        this.flowLog('Sell', 'Trade', this.bot.flow.rate, this.bot.flow.amount, current.key, 'shadow')
+                        // continue setting
+                        this.bot.flow.order = false
                         this.bot.flow.side = 'buy'
                         this.bot.flow.rate = 0
                         this.bot.flow.amount = 0
@@ -1125,7 +1173,6 @@ export default {
                     }
                 } else {
                     if (current.low <= this.bot.flow.rate) {
-                        this.bot.flow.order = false
                         this.bot.trade.buy.push({
                             key: {
                                 order: this.bot.flow.key,
@@ -1135,13 +1182,9 @@ export default {
                             amount: this.bot.flow.amount,
                             total: this.bot.flow.rate * this.bot.flow.amount
                         })
-                        this.bot.flow.log.push({
-                            side: 'Buy',
-                            type: 'Trade',
-                            rate: this.bot.flow.rate,
-                            amount: this.bot.flow.amount,
-                            time: current.from
-                        })
+                        this.flowLog('Buy', 'Trade', this.bot.flow.rate, this.bot.flow.amount, current.key, 'shadow')
+                        // continue setting
+                        this.bot.flow.order = false
                         this.bot.flow.side = 'sell'
                     }
                 }
@@ -1158,30 +1201,12 @@ export default {
                         current.close * this.bot.flow.amount >
                             this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
                     ) {
-                        this.bot.flow.rate = current.close
-                        this.bot.flow.key = current.key
-                        this.bot.flow.order = true
-                        this.bot.flow.log.push({
-                            side: 'Sell',
-                            type: 'Order',
-                            rate: this.bot.flow.rate,
-                            amount: this.bot.flow.amount,
-                            time: current.from
-                        })
+                        this.newOrder('Sell', current.close, this.bot.flow.amount, current.key, 'forProfit')
                     } else if (
                         current.close * this.bot.flow.amount <
                         this.bot.flow.rate * this.bot.flow.amount - this.bot.stoploss
                     ) {
-                        this.bot.flow.rate = current.close
-                        this.bot.flow.key = current.key
-                        this.bot.flow.order = true
-                        this.bot.flow.log.push({
-                            side: 'Sell',
-                            type: 'Order',
-                            rate: this.bot.flow.rate,
-                            amount: this.bot.flow.amount,
-                            time: current.from
-                        })
+                        this.newOrder('Sell', current.close, this.bot.flow.amount, current.key, 'forStoploss')
                     }
                 } else if (
                     this.bot.flow.side === 'buy' &&
@@ -1190,27 +1215,56 @@ export default {
                     !prev.chain.status &&
                     prev.chain.length >= this.bot.chain.upToDown &&
                     prev.high < prev.weightMoveAvg &&
-                    current.open < prev.close
+                    current.open < prev.high
                 ) {
                     let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.1, 6)
                     if (rate >= current.low && rate <= current.high) {
-                        this.bot.flow.rate = rate
-                        this.bot.flow.amount = _.floor(this.bot.fund / rate, 6)
-                        this.bot.flow.key = current.key
-                        this.bot.flow.order = true
-                        this.bot.flow.log.push({
-                            side: 'Buy',
-                            type: 'Order',
-                            rate: this.bot.flow.rate,
-                            amount: this.bot.flow.amount,
-                            time: current.from
-                        })
+                        this.newOrder('Buy', rate, _.floor(this.bot.fund / rate, 6), current.key, 'forProfit')
                     }
                 }
             }
         },
+        flowLog(side, type, rate, amount, key, comment = null) {
+            this.bot.flow.log.push({
+                side,
+                type,
+                rate,
+                amount,
+                key,
+                comment,
+                time: moment().format('HH:mm:ss')
+            })
+        },
         includeKey(array, key) {
             return _.includes(array, key)
+        },
+        focusOnConfig(focusKey) {
+            if (this.connected) {
+                let map = {
+                    fund: 'input',
+                    profit: 'input',
+                    stoploss: 'input',
+                    chainDownToUp: 'select',
+                    chainUpToDown: 'select',
+                    vwap: 'select',
+                    timefream: 'select',
+                    status: 'select'
+                }
+                _.forEach(map, (type, key) => {
+                    if (type == 'input') {
+                        this.$refs[key].$el.children[0].blur()
+                    } else if (type == 'select') {
+                        this.$refs[key].handleClose()
+                    }
+                })
+                this.$nextTick(() => {
+                    if (map[focusKey] == 'input') {
+                        this.$refs[focusKey].$el.children[0].focus()
+                    } else if (map[focusKey] == 'select') {
+                        this.$refs[focusKey].toggleMenu()
+                    }
+                })
+            }
         }
     }
 }

@@ -50,6 +50,9 @@ export default {
         this.toggleConnection()
     },
     methods: {
+        console(message) {
+            console.log(message)
+        },
         fixFloatNumber(input) {
             return Number.parseFloat(input).toFixed(6)
         },
