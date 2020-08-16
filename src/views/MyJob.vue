@@ -297,6 +297,30 @@
                         </div>
                         <div class="row at-row">
                             <div class="row col">
+                                <div class="col-24 at-row" @click.stop="focusOnConfig('backward')">
+                                    <at-input :value="bot.backward" icon="rotate-ccw" disabled>
+                                        <template slot="prepend">
+                                            <span>Backward</span>
+                                        </template>
+                                    </at-input>
+                                </div>
+                                <div class="col-24">
+                                    <at-select
+                                        ref="backward"
+                                        v-model="bot.backward"
+                                        :class="{ disabled: !connected }"
+                                        @on-change="changeBotBackward"
+                                    >
+                                        <at-option :value="1">Real time</at-option>
+                                        <at-option :value="2">2 Steps</at-option>
+                                        <at-option :value="3">3 Steps</at-option>
+                                        <at-option :value="4">4 Steps</at-option>
+                                        <at-option :value="5">5 Steps</at-option>
+                                        <at-option :value="6">6 Steps</at-option>
+                                    </at-select>
+                                </div>
+                            </div>
+                            <div class="row col">
                                 <div class="col-24 at-row" @click.stop="focusOnConfig('vwap')">
                                     <at-input :value="bot.vwap" icon="layers" disabled>
                                         <template slot="prepend">
@@ -624,6 +648,7 @@ export default {
                     upToDown: 0,
                     downToUp: 0
                 },
+                backward: 1,
                 vwap: 5,
                 timefream: 0,
                 status: 'stop',
@@ -686,13 +711,17 @@ export default {
                 '&limit=',
                 this.bot.limit,
                 '&startTime=',
-                moment()
-                    .subtract(this.botTimefreamValue * this.bot.limit, this.botTimefreamPeriod)
-                    .valueOf()
+                this.botStartTime.valueOf()
             ].join('')
         },
         streamName() {
             return [_.toLower(this.baseSymbol), _.toLower(this.quoteSymbol), '@kline_', this.bot.timefream].join('')
+        },
+        botStartTime() {
+            return moment().subtract(
+                this.botTimefreamValue * this.bot.limit * this.bot.backward,
+                this.botTimefreamPeriod
+            )
         },
         candles() {
             // convert large shadow to prev status
@@ -886,7 +915,7 @@ export default {
             this.keepCandles = {}
         },
         listenOnSocket({ data: { k: timefream } }) {
-            if (!this.botUnderTesting) {
+            if (!this.botUnderTesting && this.bot.backward === 1) {
                 this.updateKeepCandles(
                     timefream.o,
                     timefream.h,
@@ -1091,6 +1120,9 @@ export default {
                 downToUp: this.bot.chain.downToUp
             })
         },
+        changeBotBackward(value) {
+            this.toggleConnection(true)
+        },
         changeBotVwap(value) {
             this.$store.commit('botVwap', value)
             this.$nextTick(() => {
@@ -1251,6 +1283,7 @@ export default {
                     stoploss: 'input',
                     chainDownToUp: 'select',
                     chainUpToDown: 'select',
+                    backward: 'select',
                     vwap: 'select',
                     timefream: 'select',
                     status: 'select'
