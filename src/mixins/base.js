@@ -39,12 +39,24 @@ export default {
             window.location.reload()
         }
     },
-    created() {
-        this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', ''))
-        this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', ''))
-        if (this.reset) {
-            this.reset()
-        }
+    beforeCreate() {
+        this.$store
+            .dispatch('pairSymbol', {
+                base: _.get(this.$route, 'params.base', null),
+                quote: _.get(this.$route, 'params.quote', null)
+            })
+            .then(() => {
+                if (this.reset) {
+                    this.reset()
+                }
+            })
+            .catch(() => {
+                this.$router
+                    .push({
+                        name: 'config'
+                    })
+                    .catch(() => {})
+            })
     },
     mounted() {
         this.toggleConnection()

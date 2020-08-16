@@ -498,7 +498,7 @@
             </div>
             <div class="col-24 trdae-box">
                 <at-card :no-hover="true">
-                    <h4 slot="title">Today trade</h4>
+                    <h4 slot="title">All trade</h4>
                     <div slot="extra">
                         <i class="icon icon-shopping-cart primary-color"></i>
                     </div>
@@ -657,7 +657,7 @@ export default {
                     profit: null,
                     stoploss: null
                 },
-                limit: 120,
+                limit: 40,
                 pointer: 0,
                 flow: {
                     order: false,
@@ -943,11 +943,7 @@ export default {
                     true
                 )
             })
-            if (this.$store.state.api.key && this.$store.state.api.secret) {
-                // this.fetchMyCoin()
-                // this.fetchMyOpenOrder()
-                // this.fetchMyTrade()
-            }
+            this.pullFromBridge()
         },
         candlePositionStyle(input = [0]) {
             return {
@@ -980,7 +976,14 @@ export default {
                 closed
             })
         },
-        fetchMyCoin() {
+        pullFromBridge() {
+            if (this.$store.state.api.key && this.$store.state.api.secret) {
+                this.pullMyCoin()
+                this.pullMyOpenOrder()
+                this.pullMyTrade()
+            }
+        },
+        pullMyCoin() {
             this.signRequest('get', 'sapi/v1/capital/config/getall').then(({ status, data }) => {
                 if (status) {
                     let base = _.find(data, { coin: this.baseSymbol })
@@ -1000,7 +1003,7 @@ export default {
                 }
             })
         },
-        fetchMyOpenOrder() {
+        pullMyOpenOrder() {
             this.signRequest('get', 'api/v3/openOrders', {
                 symbol: [this.baseSymbol, this.quoteSymbol].join('')
             }).then(({ status, header, data }) => {
@@ -1019,7 +1022,7 @@ export default {
                 }
             })
         },
-        fetchMyTrade() {
+        pullMyTrade() {
             this.signRequest('get', 'api/v3/myTrades', {
                 symbol: [this.baseSymbol, this.quoteSymbol].join('')
             }).then(({ status, header, data }) => {
@@ -1058,15 +1061,44 @@ export default {
         },
         newOrder(side, rate, amount, key, comment) {
             // cancel last order
+            console.log(side, rate, amount, key, comment)
             if (this.bot.flow.order && this.bot.flow.side == side) {
                 console.log('cancelOrder')
             }
-            this.bot.flow.order = true
-            this.bot.flow.key = key
-            this.bot.flow.rate = rate
-            this.bot.flow.amount = amount
-            // log
-            this.flowLog(side, 'Order', rate, amount, key, comment)
+            this.signRequest('post', 'api/v3/order/test', {
+                symbol: [this.baseSymbol, this.quoteSymbol].join(''),
+                side: _.toUpper(side),
+                type: 'LIMIT',
+                timeInForce: 'GTC',
+                quantity: amount,
+                price: rate
+            }).then(({ status, header, data }) => {
+                if (status) {
+                    console.log(data)
+                    // this.$set(this.myOpenOrder, order.orderId, {
+                    //     id: order.orderId,
+                    //     side: _.upperFirst(_.toLower(order.side)),
+                    //     date: moment(order.time).format('MM-DD HH:mm:ss'),
+                    //     value: _.toNumber(order.origQty),
+                    //     price: _.toNumber(order.price),
+                    //     total: _.toNumber(order.origQty) * _.toNumber(order.price),
+                    //     loading: false
+                    // })
+                    // this.bot.flow.order = true
+                    // this.bot.flow.key = key
+                    // this.bot.flow.rate = rate
+                    // this.bot.flow.amount = amount
+                    // // log
+                    // this.flowLog(side, 'Order', rate, amount, key, comment)
+                } else {
+                    this.$Notify({
+                        title: 'Bridge',
+                        type: 'error',
+                        message: 'Error on new order',
+                        duration: 6000
+                    })
+                }
+            })
         },
         cancelOrder(id) {
             if (!this.myOpenOrder[id].loading) {
@@ -1248,7 +1280,8 @@ export default {
                 } else if (
                     this.bot.flow.side === 'buy' &&
                     current.chain.status &&
-                    current.high * 0.9 < current.weightMoveAvg &&
+                    current.high <= current.weightMoveAvg &&
+                    current.high > prev.close &&
                     !prev.chain.status &&
                     prev.chain.length >= this.bot.chain.upToDown &&
                     prev.high < prev.weightMoveAvg &&

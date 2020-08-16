@@ -11,24 +11,24 @@
                         <div class="row at-row">
                             <div class="col">
                                 <at-select v-model="baseSymbol" placeholder="Base">
-                                    <at-option value="BTC">Bitcoin</at-option>
-                                    <at-option value="ETH">Ethereum</at-option>
-                                    <at-option value="XRP">Ripple</at-option>
-                                    <at-option value="ADA">Cardano</at-option>
-                                    <at-option value="LTC">Litecoin</at-option>
-                                    <at-option value="VET">VeChain</at-option>
-                                    <at-option value="BAND">Band</at-option>
-                                    <at-option value="ATOM">Cosmos</at-option>
-                                    <at-option value="LINK">ChainLink</at-option>
-                                    <at-option value="BNB">BinanceCoin</at-option>
+                                    <at-option
+                                        v-for="(symbol, index) in $store.state.symbols.base"
+                                        :key="index"
+                                        :value="index"
+                                        >{{ symbol.name }}</at-option
+                                    >
                                 </at-select>
                             </div>
                         </div>
                         <div class="row at-row">
                             <div class="col">
                                 <at-select v-model="quoteSymbol" placeholder="Quote">
-                                    <at-option value="USDT">Tether</at-option>
-                                    <at-option value="BUSD">BinanceUSD</at-option>
+                                    <at-option
+                                        v-for="(symbol, index) in $store.state.symbols.quote"
+                                        :key="index"
+                                        :value="index"
+                                        >{{ symbol.name }}</at-option
+                                    >
                                 </at-select>
                             </div>
                         </div>
