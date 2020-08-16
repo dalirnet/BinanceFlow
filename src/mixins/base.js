@@ -1,7 +1,18 @@
 import _ from 'lodash'
 import superagent from 'superagent'
+import symbols from '@/symbols.json'
 
 export default {
+    beforeRouteEnter(to, from, next) {
+        if (
+            _.includes(_.keys(symbols.base), _.toUpper(_.get(to, 'params.base', null))) &&
+            _.includes(_.keys(symbols.quote), _.toUpper(_.get(to, 'params.quote', null)))
+        ) {
+            next()
+        } else {
+            next({ name: 'config' })
+        }
+    },
     data() {
         return {
             ws: null,
@@ -13,6 +24,10 @@ export default {
     computed: {
         baseSymbol() {
             return this.$store.state.pair.base
+        },
+        baseSymbolStep() {
+            let [integer = null, decimal = null] = _.split(symbols.base[this.$store.state.pair.base].step, '.')
+            return decimal ? decimal.length : 0
         },
         quoteSymbol() {
             return this.$store.state.pair.quote
@@ -39,24 +54,12 @@ export default {
             window.location.reload()
         }
     },
-    beforeCreate() {
-        this.$store
-            .dispatch('pairSymbol', {
-                base: _.get(this.$route, 'params.base', null),
-                quote: _.get(this.$route, 'params.quote', null)
-            })
-            .then(() => {
-                if (this.reset) {
-                    this.reset()
-                }
-            })
-            .catch(() => {
-                this.$router
-                    .push({
-                        name: 'config'
-                    })
-                    .catch(() => {})
-            })
+    created() {
+        this.$store.commit('baseSymbol', _.get(this.$route, 'params.base', null))
+        this.$store.commit('quoteSymbol', _.get(this.$route, 'params.quote', null))
+        if (this.reset) {
+            this.reset()
+        }
     },
     mounted() {
         this.toggleConnection()
@@ -65,21 +68,21 @@ export default {
         console(message) {
             console.log(message)
         },
-        fixFloatNumber(input) {
-            return Number.parseFloat(input).toFixed(6)
+        fixFloatNumber(input, floor = 6) {
+            return Number.parseFloat(input).toFixed(floor)
         },
-        betterNumber(input) {
-            let number = this.fixFloatNumber(input)
-            let [intValue = '0', floatValue = '00'] = _.split(number === '-0.000000' ? 0 : number, '.')
-            return [
-                '<strong>',
-                _.replace(intValue, /\B(?=(\d{3})+(?!\d))/g, ','),
-                '</strong>',
-                '<small>.</small>',
-                '<small>',
-                _.padEnd(floatValue, 6, '0'),
-                '</small>'
-            ].join('')
+        betterNumber(input, floor = 6) {
+            let number = this.fixFloatNumber(input, floor)
+            let decimal = _.repeat('0', floor)
+            let [intValue = '0', floatValue = decimal] = _.split(
+                number === (floor == 0 ? '-0' : '-0.' + decimal) ? 0 : number,
+                '.'
+            )
+            let out = ['<strong>', _.replace(intValue, /\B(?=(\d{3})+(?!\d))/g, ','), '</strong>']
+            if (floor > 0) {
+                out.push(...['<small>.</small>', '<small>', _.padEnd(floatValue, floor, '0'), '</small>'])
+            }
+            return out.join('')
         },
         toggleConnection(refresh = false) {
             if (!this.loading) {

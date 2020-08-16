@@ -11,24 +11,18 @@
                         <div class="row at-row">
                             <div class="col">
                                 <at-select v-model="baseSymbol" placeholder="Base">
-                                    <at-option
-                                        v-for="(symbol, index) in $store.state.symbols.base"
-                                        :key="index"
-                                        :value="index"
-                                        >{{ symbol.name }}</at-option
-                                    >
+                                    <at-option v-for="(symbol, index) in symbols.base" :key="index" :value="index">{{
+                                        symbol.name
+                                    }}</at-option>
                                 </at-select>
                             </div>
                         </div>
                         <div class="row at-row">
                             <div class="col">
                                 <at-select v-model="quoteSymbol" placeholder="Quote">
-                                    <at-option
-                                        v-for="(symbol, index) in $store.state.symbols.quote"
-                                        :key="index"
-                                        :value="index"
-                                        >{{ symbol.name }}</at-option
-                                    >
+                                    <at-option v-for="(symbol, index) in symbols.quote" :key="index" :value="index">{{
+                                        symbol.name
+                                    }}</at-option>
                                 </at-select>
                             </div>
                         </div>
@@ -101,7 +95,14 @@
 </template>
 
 <script>
+import symbols from '@/symbols.json'
+
 export default {
+    data() {
+        return {
+            symbols
+        }
+    },
     computed: {
         baseSymbol: {
             get() {

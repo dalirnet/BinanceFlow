@@ -97,7 +97,7 @@
                                     </div>
                                     <div class="current" :style="candlePositionStyle([currentCandelPrice])">
                                         <span class="item">
-                                            <span class="price" v-html="betterNumber(currentCandelPrice)"></span>
+                                            <span class="rate" v-html="betterNumber(currentCandelPrice)"></span>
                                             <span class="close-at">
                                                 <strong>{{ currentCandelCloseAt }}</strong>
                                                 <small> s</small>
@@ -130,7 +130,7 @@
                                 <small>value</small>
                                 <span class="space"></span>
                                 <span class="flex">
-                                    <strong v-html="betterNumber(order.value)"></strong>
+                                    <strong v-html="betterNumber(order.amount)"></strong>
                                     <span class="space"></span>
                                     <small>{{ baseSymbol }}</small>
                                 </span>
@@ -139,10 +139,10 @@
                                 <span class="space">x</span>
                             </span>
                             <span class="item">
-                                <small>price</small>
+                                <small>rate</small>
                                 <span class="space"></span>
                                 <span class="flex">
-                                    <strong v-html="betterNumber(order.price)"></strong>
+                                    <strong v-html="betterNumber(order.rate)"></strong>
                                     <span class="space"></span>
                                     <small>{{ quoteSymbol }}</small>
                                 </span>
@@ -486,7 +486,7 @@
                                 <span class="space"> - </span>
                                 <span class="item" v-html="betterNumber(log.rate)"></span>
                                 <span class="space"> - </span>
-                                <span class="item" v-html="betterNumber(log.amount)"></span>
+                                <span class="item" v-html="betterNumber(log.amount, baseSymbolStep)"></span>
                                 <span class="space"> - </span>
                                 <span class="item">{{ log.comment }}</span>
                                 <span class="space"> - </span>
@@ -498,7 +498,7 @@
             </div>
             <div class="col-24 trdae-box">
                 <at-card :no-hover="true">
-                    <h4 slot="title">All trade</h4>
+                    <h4 slot="title">Trade history</h4>
                     <div slot="extra">
                         <i class="icon icon-shopping-cart primary-color"></i>
                     </div>
@@ -557,10 +557,10 @@
                                 <span class="space">|</span>
                             </span>
                             <span class="item">
-                                <small>value</small>
+                                <small>amount</small>
                                 <span class="space"></span>
                                 <span class="flex">
-                                    <strong v-html="betterNumber(trade.value)"></strong>
+                                    <strong v-html="betterNumber(trade.amount)"></strong>
                                     <span class="space"></span>
                                     <small>{{ baseSymbol }}</small>
                                 </span>
@@ -569,10 +569,10 @@
                                 <span class="space">x</span>
                             </span>
                             <span class="item">
-                                <small>price</small>
+                                <small>rate</small>
                                 <span class="space"></span>
                                 <span class="flex">
-                                    <strong v-html="betterNumber(trade.price)"></strong>
+                                    <strong v-html="betterNumber(trade.rate)"></strong>
                                     <span class="space"></span>
                                     <small>{{ quoteSymbol }}</small>
                                 </span>
@@ -657,7 +657,7 @@ export default {
                     profit: null,
                     stoploss: null
                 },
-                limit: 40,
+                limit: 120,
                 pointer: 0,
                 flow: {
                     order: false,
@@ -669,6 +669,8 @@ export default {
                     check: [],
                     log: []
                 },
+                allowTrade: false,
+                allowOrder: true,
                 trade: {
                     buy: [],
                     sell: []
@@ -689,7 +691,7 @@ export default {
     },
     watch: {
         currentCandel(newValue, oldValue) {
-            if (this.botUnderTesting || this.botUnderTrading) {
+            if ((this.botUnderTrading && this.bot.allowTrade) || this.botUnderTesting) {
                 if (oldValue && newValue) {
                     let current = this.botUnderTesting ? newValue : oldValue
                     this.flowTrade(current)
@@ -725,79 +727,79 @@ export default {
         },
         candles() {
             // convert large shadow to prev status
-            let timefream = _.take(_.reverse(_.keys(this.keepCandles)), this.bot.limit)
-            return _.map(
-                _.map(timefream, (key, index) => {
-                    let current = this.keepCandles[key]
-                    current.key = key
-                    current.prev = []
-                    current.chain = {
-                        state: false,
-                        status: current.status,
-                        body: [current.body],
-                        shadow: [current.shadow],
-                        from: current.open,
-                        to: current.close,
-                        volume: current.volume,
-                        length: 1
-                    }
-                    current.weightMoveAvg = current.close
-                    let needNormalize = current.body < current.shadow * 0.9
-                    let moveAvg = _.filter(
-                        _.map(_.range(this.bot.vwap), prevIndex => {
-                            let key = _.get(timefream, index + prevIndex + 1)
-                            let prevCandle = _.get(this.keepCandles, key, false)
-                            if (prevCandle) {
-                                if (
-                                    prevIndex == 0 &&
-                                    current.volume < prevCandle.volume &&
-                                    current.high < prevCandle.high
-                                ) {
-                                    current.chain.status = prevCandle.status
-                                }
-                                if (needNormalize) {
-                                    if (prevCandle.body > prevCandle.shadow * 0.9) {
-                                        current.chain.status = prevCandle.status
-                                        needNormalize = false
-                                    }
-                                }
-
-                                current.prev.push(key)
-                                return { open: prevCandle.open, close: prevCandle.close, volume: prevCandle.volume }
-                            }
-                            return false
-                        })
-                    )
-                    if (moveAvg.length) {
-                        let sumWeightMoveAvgVolume = _.sum(_.map(moveAvg, 'volume'))
-                        current.weightMoveAvg = _.floor(
-                            _.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumWeightMoveAvgVolume)),
-                            6
-                        )
-                        current.chain.state = current.close > current.weightMoveAvg
-                    }
-                    return current
-                }),
-                candle => {
-                    let chainCheck = true
-                    _.forEach(candle.prev, prevKey => {
-                        if (chainCheck) {
-                            let prevCandle = this.keepCandles[prevKey]
-                            if (candle.chain.status === prevCandle.chain.status) {
-                                candle.chain.body.push(prevCandle.body)
-                                candle.chain.shadow.push(prevCandle.shadow)
-                                candle.chain.volume = _.floor(candle.chain.volume + prevCandle.volume, 6)
-                                candle.chain.from = prevCandle.open
-                                candle.chain.length++
-                            } else {
-                                chainCheck = false
-                            }
+            let timefream = _.take(_.keys(this.keepCandles), this.bot.limit)
+            let normalized = []
+            return _.reverse(
+                _.map(
+                    _.map(timefream, (key, index) => {
+                        let current = this.keepCandles[key]
+                        current.key = key
+                        current.prev = []
+                        current.chain = {
+                            state: false,
+                            status: current.status,
+                            body: [current.body],
+                            shadow: [current.shadow],
+                            from: current.open,
+                            to: current.close,
+                            volume: current.volume,
+                            length: 1
                         }
-                    })
-                    candle.chain.body = _.floor(_.sum(candle.chain.body) / candle.chain.length, 6)
-                    candle.chain.shadow = _.floor(_.sum(candle.chain.shadow) / candle.chain.length, 6)
-                    return candle
-                }
+                        current.weightMoveAvg = current.close
+                        let needNormalize = current.body < current.shadow * 0.9
+                        let moveAvg = _.filter(
+                            _.map(_.range(this.bot.vwap), prevIndex => {
+                                let prevKey = _.get(timefream, index - (prevIndex + 1))
+                                let prevCandle = _.get(this.keepCandles, prevKey, false)
+                                if (prevCandle) {
+                                    if (needNormalize) {
+                                        if (
+                                            !_.includes(normalized, prevKey) &&
+                                            prevCandle.body > prevCandle.shadow * 0.9
+                                        ) {
+                                            normalized.push(current.key)
+                                            current.chain.status = prevCandle.status
+                                            needNormalize = false
+                                        }
+                                    }
+
+                                    current.prev.push(prevKey)
+                                    return { open: prevCandle.open, close: prevCandle.close, volume: prevCandle.volume }
+                                }
+                                return false
+                            })
+                        )
+                        if (moveAvg.length) {
+                            let sumWeightMoveAvgVolume = _.sum(_.map(moveAvg, 'volume'))
+                            current.weightMoveAvg = _.floor(
+                                _.sum(_.map(moveAvg, ({ close, volume }) => (close * volume) / sumWeightMoveAvgVolume)),
+                                6
+                            )
+                            current.chain.state = current.close > current.weightMoveAvg
+                        }
+                        return current
+                    }),
+                    candle => {
+                        let chainCheck = true
+                        _.forEach(candle.prev, prevKey => {
+                            if (chainCheck) {
+                                let prevCandle = this.keepCandles[prevKey]
+                                if (candle.chain.status === prevCandle.chain.status) {
+                                    candle.chain.body.push(prevCandle.body)
+                                    candle.chain.shadow.push(prevCandle.shadow)
+                                    candle.chain.volume = _.floor(candle.chain.volume + prevCandle.volume, 6)
+                                    candle.chain.from = prevCandle.open
+                                    candle.chain.length++
+                                } else {
+                                    chainCheck = false
+                                }
+                            }
+                        })
+                        candle.chain.body = _.floor(_.sum(candle.chain.body) / candle.chain.length, 6)
+                        candle.chain.shadow = _.floor(_.sum(candle.chain.shadow) / candle.chain.length, 6)
+                        return candle
+                    }
+                )
             )
         },
         maxOfCandles() {
@@ -1013,8 +1015,8 @@ export default {
                             id: order.orderId,
                             side: _.upperFirst(_.toLower(order.side)),
                             date: moment(order.time).format('MM-DD HH:mm:ss'),
-                            value: _.toNumber(order.origQty),
-                            price: _.toNumber(order.price),
+                            amount: _.toNumber(order.origQty),
+                            rate: _.toNumber(order.price),
                             total: _.toNumber(order.origQty) * _.toNumber(order.price),
                             loading: false
                         })
@@ -1029,30 +1031,30 @@ export default {
                 if (status) {
                     this.mytrade.list = _.map(_.reverse(_.sortBy(data, ['time'])), trade => {
                         let commission = _.toNumber(trade.commission)
-                        let value = _.toNumber(trade.qty)
-                        let price = _.toNumber(trade.price)
-                        let total = value * price
+                        let amount = _.toNumber(trade.qty)
+                        let rate = _.toNumber(trade.price)
+                        let total = amount * rate
                         if (trade.commissionAsset == this.baseSymbol) {
-                            value -= commission
-                            total = value * price
+                            amount -= commission
+                            total = amount * rate
                         } else if (trade.commissionAsset == this.quoteSymbol) {
                             total -= commission
                         } else {
                             this.mytrade.remaining.feeAsBNB -= commission
                         }
                         if (trade.isBuyer) {
-                            this.mytrade.remaining.base += value
+                            this.mytrade.remaining.base += amount
                             this.mytrade.remaining.quote -= total
                         } else {
-                            this.mytrade.remaining.base -= value
+                            this.mytrade.remaining.base -= amount
                             this.mytrade.remaining.quote += total
                         }
                         return {
                             id: trade.id,
                             side: trade.isBuyer ? 'Buy' : 'Sell',
                             date: moment(trade.time).format('MM-DD HH:mm:ss'),
-                            value: _.floor(value, 6),
-                            price: _.floor(price, 6),
+                            amount: _.floor(amount, 6),
+                            rate: _.floor(rate, 6),
                             total: _.floor(total, 6)
                         }
                     })
@@ -1060,37 +1062,19 @@ export default {
             })
         },
         newOrder(side, rate, amount, key, comment) {
-            // cancel last order
-            console.log(side, rate, amount, key, comment)
-            if (this.bot.flow.order && this.bot.flow.side == side) {
-                console.log('cancelOrder')
-            }
-            this.signRequest('post', 'api/v3/order/test', {
-                symbol: [this.baseSymbol, this.quoteSymbol].join(''),
-                side: _.toUpper(side),
-                type: 'LIMIT',
-                timeInForce: 'GTC',
-                quantity: amount,
-                price: rate
-            }).then(({ status, header, data }) => {
-                if (status) {
-                    console.log(data)
-                    // this.$set(this.myOpenOrder, order.orderId, {
-                    //     id: order.orderId,
-                    //     side: _.upperFirst(_.toLower(order.side)),
-                    //     date: moment(order.time).format('MM-DD HH:mm:ss'),
-                    //     value: _.toNumber(order.origQty),
-                    //     price: _.toNumber(order.price),
-                    //     total: _.toNumber(order.origQty) * _.toNumber(order.price),
-                    //     loading: false
-                    // })
-                    // this.bot.flow.order = true
-                    // this.bot.flow.key = key
-                    // this.bot.flow.rate = rate
-                    // this.bot.flow.amount = amount
-                    // // log
-                    // this.flowLog(side, 'Order', rate, amount, key, comment)
-                } else {
+            if (this.bot.allowOrder) {
+                this.bot.allowOrder = false
+                let done = (id = null) => {
+                    this.bot.allowOrder = true
+                    this.bot.flow.order = true
+                    this.bot.flow.id = id
+                    this.bot.flow.key = key
+                    this.bot.flow.rate = rate
+                    this.bot.flow.amount = amount
+                    // log
+                    this.flowLog(side, 'Order', rate, amount, key, comment)
+                }
+                let fail = () => {
                     this.$Notify({
                         title: 'Bridge',
                         type: 'error',
@@ -1098,6 +1082,47 @@ export default {
                         duration: 6000
                     })
                 }
+                if (this.botUnderTesting) {
+                    done()
+                } else {
+                    // set new order
+                    this.signRequest('post', 'api/v3/order/test', {
+                        symbol: [this.baseSymbol, this.quoteSymbol].join(''),
+                        side: _.toUpper(side),
+                        type: 'LIMIT',
+                        timeInForce: 'GTC',
+                        quantity: amount,
+                        price: rate
+                    }).then(({ status, header, data }) => {
+                        if (status) {
+                            console.log(data)
+                            this.$set(this.myOpenOrder, data.orderId, {
+                                id: data.orderId,
+                                side,
+                                date: moment(data.transactTime).format('MM-DD HH:mm:ss'),
+                                amount,
+                                rate,
+                                total: amount * rate,
+                                loading: false
+                            })
+                            this.$nextTick(() => {
+                                done(data.orderId)
+                            })
+                        } else {
+                            fail()
+                        }
+                    })
+                }
+            }
+        },
+        cancelAllOrder() {
+            return new Promise(resolve => {
+                this.signRequest('delete', 'api/v3/openOrders', {
+                    symbol: [this.baseSymbol, this.quoteSymbol].join('')
+                }).then(({ status, header, data }) => {
+                    this.myOpenOrder = {}
+                    resolve()
+                })
             })
         },
         cancelOrder(id) {
@@ -1168,18 +1193,26 @@ export default {
             })
         },
         changeBotStatus(value) {
-            if (this.botUnderTesting) {
-                this.flowReset()
-                this.botTest()
-            } else if (this.botUnderTrading) {
-                this.flowReset()
-                this.$Notify({
-                    title: 'Bot',
-                    type: 'success',
-                    message: 'Start bot trading',
-                    duration: 6000
-                })
-            }
+            this.bot.allowTrade = false
+            this.$nextTick(() => {
+                if (this.botUnderTesting) {
+                    this.flowReset()
+                    this.botTest()
+                } else if (this.botUnderTrading) {
+                    this.flowReset()
+                    if (!_.isEmpty(this.myOpenOrder)) {
+                        this.cancelAllOrder().then(() => {
+                            this.bot.allowTrade = true
+                            this.$Notify({
+                                title: 'Bot',
+                                type: 'success',
+                                message: 'Start bot trading',
+                                duration: 6000
+                            })
+                        })
+                    }
+                }
+            })
         },
         flowReset() {
             this.bot.flow = {
@@ -1264,32 +1297,74 @@ export default {
             if (prev) {
                 this.bot.flow.check.push(current.key)
                 if (this.bot.flow.side === 'sell' && !current.chain.status) {
+                    let setSellOrder = {
+                        status: false,
+                        comment: null
+                    }
                     if (
                         prev.chain.status &&
                         prev.chain.length >= this.bot.chain.downToUp &&
                         current.close * this.bot.flow.amount >
                             this.bot.flow.rate * this.bot.flow.amount + this.bot.profit
                     ) {
-                        this.newOrder('Sell', current.close, this.bot.flow.amount, current.key, 'forProfit')
+                        setSellOrder.status = true
+                        setSellOrder.comment = 'forProfit'
                     } else if (
                         current.close * this.bot.flow.amount <
                         this.bot.flow.rate * this.bot.flow.amount - this.bot.stoploss
                     ) {
-                        this.newOrder('Sell', current.close, this.bot.flow.amount, current.key, 'forStoploss')
+                        setSellOrder.status = true
+                        setSellOrder.comment = 'forStoploss'
+                    }
+                    if (setSellOrder.status) {
+                        if (this.bot.flow.order) {
+                            if (!_.isNull(this.bot.flow.id)) {
+                                this.cancelOrder(this.bot.flow.id)
+                            }
+                            this.flowLog(
+                                'Sell',
+                                'Cancel',
+                                this.bot.flow.rate,
+                                this.bot.flow.amount,
+                                this.bot.flow.key,
+                                'expire'
+                            )
+                        }
+                        this.newOrder('Sell', current.close, this.bot.flow.amount, current.key, setSellOrder.comment)
                     }
                 } else if (
                     this.bot.flow.side === 'buy' &&
                     current.chain.status &&
                     current.high <= current.weightMoveAvg &&
-                    current.high > prev.close &&
                     !prev.chain.status &&
                     prev.chain.length >= this.bot.chain.upToDown &&
                     prev.high < prev.weightMoveAvg &&
+                    current.high > prev.close &&
                     current.open < prev.high
                 ) {
                     let rate = _.floor(current.open + (prev.chain.from - prev.chain.to) * 0.1, 6)
                     if (rate >= current.low && rate <= current.high) {
-                        this.newOrder('Buy', rate, _.floor(this.bot.fund / rate, 6), current.key, 'forProfit')
+                        // cancel last order
+                        if (this.bot.flow.order) {
+                            if (!_.isNull(this.bot.flow.id)) {
+                                this.cancelOrder(this.bot.flow.id)
+                            }
+                            this.flowLog(
+                                'Buy',
+                                'Cancel',
+                                this.bot.flow.rate,
+                                this.bot.flow.amount,
+                                this.bot.flow.key,
+                                'expire'
+                            )
+                        }
+                        this.newOrder(
+                            'Buy',
+                            rate,
+                            _.floor(this.bot.fund / rate, this.baseSymbolStep),
+                            current.key,
+                            'forProfit'
+                        )
                     }
                 }
             }
@@ -1407,14 +1482,14 @@ export default {
                     font-size: 10px;
                     flex-direction: column;
 
-                    .price,
+                    .rate,
                     .close-at {
                         background: #ffc82c;
                         color: #0b0e11;
                         border-radius: 4px;
                     }
 
-                    .price {
+                    .rate {
                         padding: 2px 4px 0px 4px;
                         border-radius: 4px 4px 0 0;
                     }

@@ -24,24 +24,6 @@ export default new Vuex.Store({
             chain: lockr.get('botChain', {}),
             vwap: lockr.get('botVwap', {}),
             timefream: lockr.get('botTimefream', {})
-        },
-        symbols: {
-            base: {
-                BTC: { name: 'Bitcoin', step: 0.000001 },
-                ETH: { name: 'Ethereum', step: 0.00001 },
-                XRP: { name: 'Ripple', step: 0.1 },
-                ADA: { name: 'Cardano', step: 0.1 },
-                LTC: { name: 'Litecoin', step: 0.00001 },
-                VET: { name: 'VeChain', step: 1 },
-                BAND: { name: 'Band', step: 0.01 },
-                ATOM: { name: 'Cosmos', step: 0.001 },
-                LINK: { name: 'ChainLink', step: 0.01 },
-                BNB: { name: 'BinanceCoin', step: 0.01 }
-            },
-            quote: {
-                USDT: { name: 'Tether' },
-                BUSD: { name: 'BinanceUSD' }
-            }
         }
     },
     getters: {
@@ -107,18 +89,5 @@ export default new Vuex.Store({
             lockr.set('botTimefream', state.bot.timefream)
         }
     },
-    actions: {
-        pairSymbol(context, { base = null, quote = null }) {
-            if (
-                _.includes(_.keys(context.state.symbols.base), _.toUpper(base)) &&
-                _.includes(_.keys(context.state.symbols.quote), _.toUpper(quote))
-            ) {
-                context.commit('baseSymbol', base)
-                context.commit('quoteSymbol', quote)
-                return Promise.resolve()
-            } else {
-                return Promise.reject()
-            }
-        }
-    }
+    actions: {}
 })
