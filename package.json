@@ -15,7 +15,7 @@
         "crypto-js": "^4.0.0",
         "express": "^4.17.1",
         "lockr": "^0.8.5",
-        "lodash": "^4.17.19",
+        "lodash": "^4.17.21",
         "moment": "^2.27.0",
         "query-string": "^6.13.1",
         "superagent": "^5.3.1",
